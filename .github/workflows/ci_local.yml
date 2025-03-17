@@ -8,39 +8,15 @@ on:
   pull_request:
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    name: Lint
-    steps:
-      - name: Check environment
-        run: |
-          ruby --version
-          pwd
-          ls -la
-          
-      - name: Install RuboCop
-        run: |
-          gem install rubocop -v "~> 1.21"
-          rubocop --version
-          
-      - name: Run RuboCop
-        run: bundle exec rubocop || echo "RuboCop found issues, but we'll continue anyway"
-
   test:
     runs-on: ubuntu-latest
     name: Test
     steps:
-      - name: Check environment
-        run: |
-          ruby --version
-          pwd
-          ls -la
-          
       - name: Install required packages
         run: |
           apt-get update
           apt-get install -y git build-essential pkg-config libsqlite3-dev
-          
+      
       - name: Install dependencies
         run: |
           gem install bundler
@@ -50,26 +26,29 @@ jobs:
       - name: Run tests
         run: bundle exec rspec || echo "Tests failed, but we'll continue anyway for local testing"
         
-  security:
+  lint:
     runs-on: ubuntu-latest
-    name: Security
+    name: Lint
     steps:
-      - name: Check environment
+      - name: Install required packages
         run: |
-          ruby --version
-          pwd
-          ls -la
+          apt-get update
+          apt-get install -y git build-essential
           
-      - name: Install Brakeman
+      - name: Install dependencies
         run: |
-          gem install brakeman -v "~> 6.1"
-          brakeman --version
+          gem install bundler
+          bundle config set --local path vendor/bundle
+          bundle install --jobs 4 --retry 3
           
+      - name: Run RuboCop
+        run: bundle exec rubocop || echo "RuboCop found issues, but we'll continue anyway"
+        
       - name: Run Brakeman
         run: |
           # Only run if app directory exists (for Rails projects)
           if [ -d "app" ]; then
-            brakeman -z --no-exit-on-warn --no-exit-on-error || echo "Brakeman found issues, but we'll continue anyway"
+            bundle exec brakeman -z --no-exit-on-warn --no-exit-on-error || echo "Brakeman found issues, but we'll continue anyway"
           else
             echo "No app directory found, skipping Brakeman"
           fi 
