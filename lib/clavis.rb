@@ -52,6 +52,7 @@ module Clavis
 
     def configure
       yield(configuration)
+      configuration.post_initialize if configuration.respond_to?(:post_initialize)
     end
 
     def configuration

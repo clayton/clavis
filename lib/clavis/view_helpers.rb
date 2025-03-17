@@ -13,51 +13,54 @@ module Clavis
     # @option options [String] :method HTTP method for the button (default: :get)
     # @option options [Hash] :html HTML attributes for the button
     # @return [String] HTML for the button
-    def oauth_button(provider, options = {})
+    def clavis_oauth_button(provider, options = {})
       provider = provider.to_sym
 
       # Default options
       options = {
-        text: default_button_text(provider),
-        class: default_button_class(provider),
-        icon: default_button_icon(provider),
-        icon_class: default_icon_class(provider),
+        text: clavis_default_button_text(provider),
+        class: clavis_default_button_class(provider),
+        icon: clavis_default_button_icon(provider),
+        icon_class: clavis_default_icon_class(provider),
         method: :get,
         html: {}
       }.merge(options)
 
       # Generate the button
-      link_to(
-        oauth_button_content(provider, options),
-        auth_path(provider),
+      clavis_link_to(
+        clavis_oauth_button_content(provider, options),
+        clavis_auth_path(provider),
         method: options[:method],
         class: options[:class],
         **options[:html]
       )
     end
 
+    # Backwards compatibility alias for existing code
+    alias oauth_button clavis_oauth_button
+
     private
 
-    def oauth_button_content(_provider, options)
+    def clavis_oauth_button_content(_provider, options)
       content = ""
 
       # Add icon if available
-      content += content_tag(:span, "", class: options[:icon_class]) if options[:icon].present?
+      content += clavis_content_tag(:span, "", class: options[:icon_class]) if options[:icon].present?
 
       # Add text
-      content += content_tag(:span, options[:text])
+      content += clavis_content_tag(:span, options[:text])
 
       content.html_safe
     end
 
-    def auth_path(provider)
+    def clavis_auth_path(provider)
       Rails.application.routes.url_helpers.send("auth_#{provider}_path")
     rescue NoMethodError
       # Fallback for custom providers
       Rails.application.routes.url_helpers.send("auth_path", provider: provider)
     end
 
-    def default_button_text(provider)
+    def clavis_default_button_text(provider)
       case provider
       when :google
         "Sign in with Google"
@@ -74,11 +77,11 @@ module Clavis
       end
     end
 
-    def default_button_class(provider)
-      "oauth-button oauth-button--#{provider}"
+    def clavis_default_button_class(provider)
+      "clavis-oauth-button clavis-oauth-button--#{provider}"
     end
 
-    def default_button_icon(provider)
+    def clavis_default_button_icon(provider)
       case provider
       when :google
         "google"
@@ -95,11 +98,11 @@ module Clavis
       end
     end
 
-    def default_icon_class(provider)
-      "oauth-button__icon oauth-button__icon--#{provider}"
+    def clavis_default_icon_class(provider)
+      "clavis-oauth-button__icon clavis-oauth-button__icon--#{provider}"
     end
 
-    def provider_svg(provider)
+    def clavis_provider_svg(provider)
       case provider.to_sym
       when :google
         <<~SVG.html_safe
@@ -132,16 +135,16 @@ module Clavis
           </svg>
         SVG
       else
-        content_tag(:div, "", class: "clavis-icon clavis-icon-#{provider}")
+        clavis_content_tag(:div, "", class: "clavis-icon clavis-icon-#{provider}")
       end
     end
 
-    def auth_authorize_path(provider)
+    def clavis_auth_authorize_path(provider)
       "/auth/#{provider}"
     end
 
     # Rails helper methods for non-Rails environments
-    def content_tag(tag, content_or_options_with_block = nil, options = nil, &block)
+    def clavis_content_tag(tag, content_or_options_with_block = nil, options = nil, &block)
       if block_given?
         options = content_or_options_with_block if content_or_options_with_block.is_a?(Hash)
         content = capture(&block)
@@ -150,12 +153,12 @@ module Clavis
       end
 
       options ||= {}
-      tag_options = tag_options(options)
+      tag_options = clavis_tag_options(options)
 
       "<#{tag}#{tag_options}>#{content}</#{tag}>"
     end
 
-    def link_to(name = nil, options = nil, html_options = nil, &block)
+    def clavis_link_to(name = nil, options = nil, html_options = nil, &block)
       if block_given?
         html_options = options
         options = name
@@ -164,15 +167,15 @@ module Clavis
       options ||= {}
       html_options ||= {}
 
-      url = url_for(options)
-      html_options = convert_options_to_data_attributes(options, html_options)
-      tag_options = tag_options(html_options)
+      url = clavis_url_for(options)
+      html_options = clavis_convert_options_to_data_attributes(options, html_options)
+      tag_options = clavis_tag_options(html_options)
 
       href = "href=\"#{url}\"" unless url.nil?
       "<a #{href}#{tag_options}>#{name}</a>"
     end
 
-    def url_for(options)
+    def clavis_url_for(options)
       case options
       when String
         options
@@ -188,40 +191,40 @@ module Clavis
       end
     end
 
-    def tag_options(options)
+    def clavis_tag_options(options)
       return "" if options.empty?
 
       attrs = []
       options.each_pair do |key, value|
         if key.to_s == "data" && value.is_a?(Hash)
           value.each_pair do |k, v|
-            attrs << data_tag_option("data-#{k}", v)
+            attrs << clavis_data_tag_option("data-#{k}", v)
           end
         elsif key.to_s == "class" && value.is_a?(Array)
-          attrs << tag_option(key, value.join(" "))
+          attrs << clavis_tag_option(key, value.join(" "))
         else
-          attrs << tag_option(key, value)
+          attrs << clavis_tag_option(key, value)
         end
       end
 
       " #{attrs.join(" ")}" unless attrs.empty?
     end
 
-    def tag_option(key, value)
+    def clavis_tag_option(key, value)
       "#{key}=\"#{value}\""
     end
 
-    def data_tag_option(key, value)
+    def clavis_data_tag_option(key, value)
       "#{key}=\"#{value}\""
     end
 
-    def convert_options_to_data_attributes(_options, html_options)
+    def clavis_convert_options_to_data_attributes(_options, html_options)
       html_options["data-method"] = html_options.delete(:method) if html_options.key?(:method)
 
       html_options
     end
 
-    def capture(&block)
+    def clavis_capture(&block)
       block.call
     end
 

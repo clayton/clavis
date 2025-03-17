@@ -342,10 +342,45 @@ end
 
 <div class="oauth-providers">
   <p>Or sign in with:</p>
-  <%= oauth_button :google %>
-  <%= oauth_button :github %>
-  <%= oauth_button :apple %>
+  <%= clavis_oauth_button :google %>
+  <%= clavis_oauth_button :github %>
+  <%= clavis_oauth_button :apple %>
 </div>
+```
+
+There are two ways to include the Clavis view helpers in your application:
+
+#### Option 1: Manual Include (Recommended)
+
+This approach avoids conflicts with Rails' built-in form helpers:
+
+```ruby
+# app/helpers/oauth_helper.rb
+module OauthHelper
+  include Clavis::ViewHelpers
+end
+```
+
+Then in your view, reference the helper explicitly:
+
+```erb
+<%# Use the namespaced helper in your view %>
+<%= clavis_oauth_button :google %>
+<%= clavis_oauth_button :github, text: "Continue with GitHub" %>
+```
+
+#### Option 2: Auto-Include
+
+Clavis can automatically include view helpers in your ApplicationHelper and ActionView, but this may conflict with Rails form helpers:
+
+```ruby
+# config/initializers/clavis.rb
+Clavis.configure do |config|
+  # ... other configuration
+  
+  # Enable automatic inclusion of view helpers (defaults to true)
+  config.view_helpers_auto_include = true
+end
 ```
 
 ### Customizing User Creation
@@ -637,8 +672,10 @@ For issues integrating with existing authentication systems, see the detailed gu
 
 | Method | Description | Options |
 |--------|-------------|---------|
-| `oauth_button` | Renders OAuth button | `provider`: The provider to use<br>`text`: Custom button text<br>`class`: Additional CSS classes |
-| `provider_svg` | Renders provider logo | `provider`: The provider to use |
+| `clavis_oauth_button` | Renders OAuth button | `provider`: The provider to use<br>`text`: Custom button text<br>`class`: Additional CSS classes |
+| `oauth_button` | Legacy alias for clavis_oauth_button | Same as above (maintained for backwards compatibility) |
+| `clavis_provider_svg` | Renders provider logo | `provider`: The provider to use |
+| `provider_svg` | Legacy alias for clavis_provider_svg | Same as above (maintained for backwards compatibility) |
 
 ### Auth Hash Structure
 

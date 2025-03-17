@@ -2,6 +2,8 @@
 
 Clavis is a Ruby gem that provides an easy-to-use implementation of OIDC (OpenID Connect) and OAuth2 functionality for Rails applications. It focuses on simplifying the "Sign in with ____" experience while adhering to relevant security standards and best practices.
 
+> 🔑 **Fun fact**: The name "Clavis" comes from the Latin word for "key" - a fitting name for a gem that unlocks secure authentication!
+
 ## Table of Contents
 
 1. [Installation](#installation)
@@ -258,38 +260,66 @@ end
 
 ## View Integration
 
-Include the view helpers in your application helper:
+Clavis provides view helpers for generating OAuth buttons. There are two ways to include these helpers:
+
+### Option 1: Manual Include (Recommended)
+
+This approach avoids conflicts with Rails' form helpers:
 
 ```ruby
-# app/helpers/application_helper.rb
-module ApplicationHelper
+# app/helpers/oauth_helper.rb
+module OauthHelper
   include Clavis::ViewHelpers
 end
 ```
 
-Add OAuth buttons to your sign-in page:
+Then in your views:
 
 ```erb
 <%# app/views/sessions/new.html.erb %>
 <h1>Sign In</h1>
 
 <div class="oauth-buttons">
-  <%= oauth_button :google %>
-  <%= oauth_button :github %>
-  <%= oauth_button :apple %>
-  <%= oauth_button :facebook %>
-  <%= oauth_button :microsoft %>
+  <%= clavis_oauth_button :google %>
+  <%= clavis_oauth_button :github %>
+  <%= clavis_oauth_button :apple %>
+  <%= clavis_oauth_button :facebook %>
+  <%= clavis_oauth_button :microsoft %>
 </div>
+```
 
-<%# Or with custom text %>
-<div class="oauth-buttons">
-  <%= oauth_button :google, text: "Continue with Google" %>
-</div>
+### Option 2: Auto-Include (May cause conflicts)
 
-<%# Or with custom classes %>
-<div class="oauth-buttons">
-  <%= oauth_button :github, class: "my-custom-button" %>
-</div>
+If you prefer automatic inclusion, you can enable it in the configuration:
+
+```ruby
+# config/initializers/clavis.rb
+Clavis.configure do |config|
+  # ... other config
+  
+  # Enable automatic view helper inclusion (not recommended if using form_with)
+  config.view_helpers_auto_include = true
+end
+```
+
+With this option, you can use either `oauth_button` or `clavis_oauth_button` in any view, but it may conflict with Rails' form helpers.
+
+### Customizing Buttons
+
+```erb
+<%# Custom button text %>
+<%= clavis_oauth_button :google, text: "Continue with Google" %>
+
+<%# Custom CSS class %>
+<%= clavis_oauth_button :github, class: "my-custom-button" %>
+
+<%# Custom data attributes %>
+<%= clavis_oauth_button :apple, data: { analytics_event: "apple_login_click" } %>
+
+<%# Completely custom button with same authorization flow %>
+<%= link_to auth_path(:google), class: "my-fancy-button" do %>
+  <i class="custom-icon"></i> Google Login
+<% end %>
 ```
 
 ## Routes Configuration

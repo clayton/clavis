@@ -7,7 +7,8 @@ module Clavis
                   :allowed_redirect_hosts, :exact_redirect_uri_matching, :allow_localhost_in_development,
                   :raise_on_invalid_redirect, :enforce_https, :allow_http_localhost, :verify_ssl,
                   :minimum_tls_version, :validate_inputs, :sanitize_inputs, :rotate_session_after_login,
-                  :session_key_prefix
+                  :session_key_prefix, :logger, :log_level, :token_encryption_key, :csrf_protection_enabled,
+                  :valid_redirect_schemes, :view_helpers_auto_include
 
     def initialize
       @providers = {}
@@ -41,6 +42,19 @@ module Clavis
       # Session management configuration
       @rotate_session_after_login = true
       @session_key_prefix = "clavis"
+
+      # Additional configuration options
+      @logger = nil
+      @log_level = :info
+      @token_encryption_key = nil
+      @csrf_protection_enabled = true
+      @valid_redirect_schemes = %w[http https]
+      @view_helpers_auto_include = true
+    end
+
+    def post_initialize
+      # Set up engine view helpers based on configuration
+      Clavis::Engine.include_view_helpers = @view_helpers_auto_include if defined?(Clavis::Engine)
     end
 
     def provider_configured?(provider_name)

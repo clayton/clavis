@@ -6,6 +6,10 @@ module Clavis
   class Engine < ::Rails::Engine
     isolate_namespace Clavis
 
+    # Class-level configuration option to control helper inclusion
+    mattr_accessor :include_view_helpers
+    self.include_view_helpers = true # Default to true
+
     initializer "clavis.assets" do |app|
       # Add Clavis assets to the asset pipeline
       app.config.assets.paths << root.join("app", "assets", "stylesheets") if app.config.respond_to?(:assets)
@@ -17,6 +21,7 @@ module Clavis
         include Clavis::Controllers::Concerns::Authentication
       end
 
+      # Include view helpers based on configuration (default: true)
       ActiveSupport.on_load(:action_view) do
         include Clavis::ViewHelpers
       end
