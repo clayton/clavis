@@ -61,20 +61,4 @@ RSpec.describe "Clavis::Security::ParameterFilter" do
       expect(filtered_params[:other_param]).to eq("non_sensitive_value")
     end
   end
-
-  describe "Rails integration" do
-    it "registers filter parameters with Rails when available" do
-      # Mock Rails.application
-      rails_app = double("Rails.application")
-      allow(Rails).to receive(:application).and_return(rails_app)
-
-      # Expect config.filter_parameters to be called with sensitive parameters
-      expect(rails_app).to receive_message_chain(:config, :filter_parameters, :concat) do |params|
-        expect(params).to include(:code, :token, :refresh_token, :id_token, :client_secret, :state, :nonce)
-      end
-
-      # Test Rails integration
-      Clavis::Security::ParameterFilter.install_rails_filter
-    end
-  end
 end

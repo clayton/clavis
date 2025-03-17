@@ -159,8 +159,15 @@ module Clavis
           return "" if input.nil?
           return input unless input.is_a?(String)
 
-          # Remove all HTML tags
-          input.gsub(/<[^>]*>/, "")
+          # Remove script tags and their content
+          result = input.gsub(%r{<script\b[^>]*>.*?</script>}im, "")
+
+          # Remove other potentially dangerous tags
+          result = result.gsub(/<[^>]*>/, "")
+
+          # Remove javascript: and data: URLs
+          result = result.gsub(/javascript:/i, "")
+          result.gsub(/data:/i, "")
         end
 
         # Sanitizes a hash to prevent XSS

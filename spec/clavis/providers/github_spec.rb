@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Clavis::Providers::GitHub do
+RSpec.describe Clavis::Providers::Github do
   let(:config) do
     {
       client_id: "test-client-id",

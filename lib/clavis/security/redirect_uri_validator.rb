@@ -16,7 +16,7 @@ module Clavis
             parsed_uri = URI.parse(uri)
 
             # Check if localhost is allowed in development
-            return false if localhost?(parsed_uri.host) && !allow_localhost_in_development?
+            return allow_localhost_in_development? if localhost?(parsed_uri.host)
 
             # Check against allowed hosts
             return true if host_allowed?(parsed_uri.host)
@@ -96,8 +96,11 @@ module Clavis
         # @return [Boolean] Whether localhost is allowed
         def allow_localhost_in_development?
           return false unless Clavis.configuration.allow_localhost_in_development
-          return false unless defined?(Rails)
 
+          # If Rails is not defined, allow localhost in development mode
+          return true unless defined?(Rails)
+
+          # Allow localhost in development or test environments
           Rails.env.development? || Rails.env.test?
         end
 
