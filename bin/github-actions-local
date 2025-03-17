@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== Running GitHub Actions workflow locally ==="
+echo ""
+
+echo "=== Job: Lint ==="
+bundle exec rubocop
+echo ""
+
+echo "=== Job: Security ==="
+bundle exec brakeman -z --no-exit-on-warn --no-exit-on-error
+echo ""
+
+echo "=== Job: Test ==="
+bundle exec rspec
+echo ""
+
+echo "=== All GitHub Actions jobs completed successfully! ===" 

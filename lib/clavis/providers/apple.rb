@@ -18,11 +18,11 @@ module Clavis
         @private_key = config[:private_key] || ENV.fetch("APPLE_PRIVATE_KEY", nil)
         @private_key_path = config[:private_key_path] || ENV.fetch("APPLE_PRIVATE_KEY_PATH", nil)
 
-        super
-      end
+        config[:authorization_endpoint] = APPLE_AUTH_URL
+        config[:token_endpoint] = APPLE_TOKEN_URL
+        config[:userinfo_endpoint] = nil # Apple doesn't have a userinfo endpoint
 
-      def provider_name
-        :apple
+        super
       end
 
       def authorization_endpoint
@@ -39,6 +39,10 @@ module Clavis
 
       def default_scopes
         "name email"
+      end
+
+      def openid_provider?
+        true
       end
 
       def refresh_token(_refresh_token)
@@ -75,6 +79,7 @@ module Clavis
       protected
 
       def validate_configuration!
+        super
         raise Clavis::MissingConfiguration, "team_id for Apple" if @team_id.nil? || @team_id.empty?
         raise Clavis::MissingConfiguration, "key_id for Apple" if @key_id.nil? || @key_id.empty?
         raise Clavis::MissingConfiguration, "private_key for Apple" if @private_key.nil? && @private_key_path.nil?

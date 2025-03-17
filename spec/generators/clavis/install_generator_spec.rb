@@ -2,10 +2,22 @@
 
 require "spec_helper"
 
+# This spec is a placeholder and requires a Rails application to run properly.
+# The Clavis::Generators::InstallGenerator is a Rails generator that creates:
+# - An initializer file with configuration
+# - Database migrations for OAuth identities
+# - Any other files needed for Clavis integration
+#
+# Testing generators requires a Rails application environment with the
+# Rails::Generators::TestCase functionality.
 RSpec.describe "Clavis::Generators::InstallGenerator", rails: true do
-  # This is a stub test since we can't fully test the generator without a Rails app
-  it "generates initializer and migration", skip: "This test requires a Rails environment" do
-    # This test requires a full Rails environment with generators to run correctly
-    # It's skipped in the standard test suite
+  # This test is intentionally skipped and serves as documentation
+  it "generates necessary files for Clavis integration" do
+    skip "This test requires a Rails environment"
+
+    # In a Rails environment, we would test:
+    # - File generation (initializer, migration)
+    # - Content of generated files
+    # - Proper namespacing and configuration options
   end
 end

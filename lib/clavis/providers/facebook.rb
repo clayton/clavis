@@ -3,6 +3,14 @@
 module Clavis
   module Providers
     class Facebook < Base
+      def initialize(config = {})
+        config[:authorization_endpoint] = "https://www.facebook.com/v18.0/dialog/oauth"
+        config[:token_endpoint] = "https://graph.facebook.com/v18.0/oauth/access_token"
+        config[:userinfo_endpoint] = "https://graph.facebook.com/v18.0/me?fields=id,name,email,picture"
+        config[:scope] = config[:scope] || "email public_profile"
+        super
+      end
+
       def authorization_endpoint
         "https://www.facebook.com/v18.0/dialog/oauth"
       end
@@ -45,8 +53,12 @@ module Clavis
           req.params["fields"] = "id,name,email,first_name,last_name,picture"
         end
 
-        raise Clavis::InvalidAccessToken if response.status != 200
+        if response.status != 200
+          Clavis::Logging.log_userinfo_request(provider_name, false)
+          handle_userinfo_error_response(response)
+        end
 
+        Clavis::Logging.log_userinfo_request(provider_name, true)
         process_userinfo_response(response)
       end
 

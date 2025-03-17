@@ -3,6 +3,21 @@ set -euo pipefail
 IFS=$'\n\t'
 set -vx
 
+# Install gems
 bundle install
+
+# Install brakeman if not already installed
+if ! gem list -i brakeman > /dev/null 2>&1; then
+  echo "Installing brakeman..."
+  gem install brakeman
+fi
+
+# Run RuboCop to check for issues
+echo "Running RuboCop..."
+bundle exec rubocop --auto-correct
+
+# Run tests to make sure everything is working
+echo "Running tests..."
+bundle exec rspec
 
 # Do any other automated setup that you need to do here

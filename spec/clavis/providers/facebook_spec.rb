@@ -33,7 +33,7 @@ RSpec.describe Clavis::Providers::Facebook do
 
   describe "#userinfo_endpoint" do
     it "returns the Facebook userinfo endpoint" do
-      expect(provider.userinfo_endpoint).to eq("https://graph.facebook.com/v18.0/me")
+      expect(provider.userinfo_endpoint).to eq("https://graph.facebook.com/v18.0/me?fields=id,name,email,picture")
     end
   end
 

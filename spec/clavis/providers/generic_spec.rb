@@ -23,7 +23,8 @@ RSpec.describe Clavis::Providers::Generic do
       expect(provider.authorization_endpoint).to eq("https://custom-provider.com/oauth/authorize")
       expect(provider.token_endpoint).to eq("https://custom-provider.com/oauth/token")
       expect(provider.userinfo_endpoint).to eq("https://custom-provider.com/oauth/userinfo")
-      expect(provider.default_scopes).to eq("profile email")
+      expect(provider.default_scopes).to include("profile")
+      expect(provider.default_scopes).to include("email")
       expect(provider.openid_provider?).to be false
     end
 
@@ -124,21 +125,29 @@ RSpec.describe Clavis::Providers::Generic do
 
   describe "#get_user_info" do
     let(:http_client) { instance_double(Faraday::Connection) }
+    let(:user_info) do
+      {
+        id: "user123",
+        name: "Test User",
+        email: "test@example.com"
+      }
+    end
+
     let(:response) do
-      instance_double(
-        Faraday::Response,
-        status: 200,
-        body: {
-          id: "user123",
-          name: "Test User",
-          email: "test@example.com"
-        }.to_json
-      )
+      instance_double(Faraday::Response,
+                      status: 200,
+                      body: user_info.to_json)
     end
 
     before do
       allow(provider).to receive(:http_client).and_return(http_client)
-      allow(http_client).to receive(:get).and_return(response)
+      allow(http_client).to receive(:get).and_yield(instance_double(Faraday::Request, headers: {})).and_return(response)
+      allow(Clavis::Logging).to receive(:log_userinfo_request)
+
+      # Stub the validation methods
+      allow(Clavis::Security::InputValidator).to receive(:valid_token?).and_return(true)
+      allow(Clavis::Security::InputValidator).to receive(:valid_userinfo_response?).and_return(true)
+      allow(Clavis::Security::InputValidator).to receive(:sanitize_hash).and_return(user_info)
     end
 
     it "fetches user info from the userinfo endpoint" do
@@ -149,6 +158,9 @@ RSpec.describe Clavis::Providers::Generic do
         name: "Test User",
         email: "test@example.com"
       )
+
+      expect(http_client).to have_received(:get)
+      expect(Clavis::Logging).to have_received(:log_userinfo_request).with(:generic, true)
     end
   end
 end

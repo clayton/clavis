@@ -5,10 +5,10 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in clavis.gemspec
 gemspec
 
+# Development dependencies
+gem "brakeman", "~> 6.1"
 gem "rake", "~> 13.0"
-
 gem "rspec", "~> 3.0"
-
 gem "rubocop", "~> 1.21"
 
 gem "ostruct", "~> 0.6.0"

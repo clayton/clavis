@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Check if brakeman is installed
+unless system("gem list -i brakeman")
+  puts "Brakeman is not installed. Installing..."
+  system("gem install brakeman")
+end
+
+puts "\n=== Running RuboCop ==="
+exit 1 unless system("bundle exec rubocop")
+
+puts "\n=== Running Brakeman ==="
+exit 1 unless system("bundle exec brakeman -z --no-exit-on-warn --no-exit-on-error")
+
+puts "\n=== Running Tests ==="
+exit 1 unless system("bundle exec rspec")
+
+puts "\n=== All checks passed! ===" 

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Build the gem
+bundle exec rake build
+
+# Create a temporary directory for testing
+TEST_DIR=$(mktemp -d)
+echo "Created temporary directory: $TEST_DIR"
+
+# Copy the gem to the test directory
+cp pkg/clavis-*.gem "$TEST_DIR/"
+
+cd "$TEST_DIR"
+
+# Install Rails and create a new app
+gem install rails
+rails new test-app --database=sqlite3 --skip-bootsnap
+
+cd test-app
+
+# Add clavis to the Gemfile
+echo "gem 'clavis', path: '../clavis-$(cat ../../lib/clavis/version.rb | grep VERSION | cut -d\"'\" -f2).gem'" >> Gemfile
+bundle install
+
+# Generate clavis installation
+bin/rails generate clavis:install
+
+# Create a simple test
+mkdir -p test/models
+cat > test/models/clavis_test.rb << EOF
+require "test_helper"
+
+class ClavisTest < ActiveSupport::TestCase
+  test "clavis is loaded" do
+    assert defined?(Clavis)
+  end
+end
+EOF
+
+# Run the test
+bin/rails test
+
+# Clean up
+echo "Tests completed successfully!"
+echo "Test app is located at $TEST_DIR/test-app"
+echo "You can remove it with: rm -rf $TEST_DIR" 

@@ -1,0 +1,41 @@
+name: Matrix Build
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version:
+          - '3.3.0'
+          - '3.4.1'
+        rails-version:
+          - '7.0'
+          - '7.1'
+          
+    name: Ruby ${{ matrix.ruby-version }} | Rails ${{ matrix.rails-version }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+          
+      - name: Install dependencies
+        run: |
+          bundle config set --local without 'development'
+          bundle add activesupport --version "~> ${{ matrix.rails-version }}.0"
+          bundle install
+          
+      - name: Run tests
+        run: bundle exec rspec 

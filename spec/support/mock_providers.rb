@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Clavis
-  module Providers
+  module MockProviders
     class Base
       attr_reader :client_id, :client_secret, :redirect_uri
 

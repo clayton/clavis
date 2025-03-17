@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Run all CI checks using rake
+
+bundle install
+bundle exec rake ci 

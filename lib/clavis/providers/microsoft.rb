@@ -4,7 +4,14 @@ module Clavis
   module Providers
     class Microsoft < Base
       def initialize(config = {})
-        @config = config
+        @tenant = config[:tenant] || "common"
+
+        # Set endpoints based on tenant
+        config[:authorization_endpoint] = "https://login.microsoftonline.com/#{@tenant}/oauth2/v2.0/authorize"
+        config[:token_endpoint] = "https://login.microsoftonline.com/#{@tenant}/oauth2/v2.0/token"
+        config[:userinfo_endpoint] = "https://graph.microsoft.com/v1.0/me"
+        config[:scope] = config[:scope] || "openid email profile User.Read"
+
         super
       end
 
@@ -44,9 +51,7 @@ module Clavis
 
       private
 
-      def tenant
-        @config[:tenant] || "common"
-      end
+      attr_reader :tenant
     end
   end
 end

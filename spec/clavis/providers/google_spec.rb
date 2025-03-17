@@ -58,7 +58,7 @@ RSpec.describe Clavis::Providers::Google do
 
   describe "#userinfo_endpoint" do
     it "returns the Google userinfo endpoint" do
-      expect(provider.userinfo_endpoint).to eq("https://openidconnect.googleapis.com/v1/userinfo")
+      expect(provider.userinfo_endpoint).to eq("https://www.googleapis.com/oauth2/v3/userinfo")
     end
   end
 
@@ -82,9 +82,9 @@ RSpec.describe Clavis::Providers::Google do
       expect(url).to include("response_type=code")
       expect(url).to include("client_id=test-client-id")
       expect(url).to include("redirect_uri=https%3A%2F%2Fexample.com%2Fauth%2Fgoogle%2Fcallback")
+      expect(url).to include("scope=openid+email+profile")
       expect(url).to include("state=test-state")
       expect(url).to include("nonce=test-nonce")
-      expect(url).to include("scope=openid+email+profile")
     end
 
     it "includes access_type=offline and prompt=consent for refresh token support" do
@@ -103,19 +103,16 @@ RSpec.describe Clavis::Providers::Google do
 
   describe "#token_exchange" do
     let(:http_client) { instance_double(Faraday::Connection) }
-    let(:response) do
-      instance_double(
-        Faraday::Response,
-        status: 200,
-        body: {
-          access_token: "test-access-token",
-          token_type: "Bearer",
-          expires_in: 3600,
-          refresh_token: "test-refresh-token",
-          id_token: "header.payload.signature"
-        }.to_json
-      )
+    let(:response_body) do
+      {
+        access_token: "test-access-token",
+        token_type: "Bearer",
+        expires_in: 3600,
+        refresh_token: "test-refresh-token",
+        id_token: "test-id-token"
+      }.to_json
     end
+    let(:response) { instance_double(Faraday::Response, status: 200, body: response_body) }
 
     before do
       allow(provider).to receive(:http_client).and_return(http_client)
@@ -131,7 +128,7 @@ RSpec.describe Clavis::Providers::Google do
         token_type: "Bearer",
         expires_in: 3600,
         refresh_token: "test-refresh-token",
-        id_token: "header.payload.signature"
+        id_token: "test-id-token"
       )
     end
   end

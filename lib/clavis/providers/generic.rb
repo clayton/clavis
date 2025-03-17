@@ -5,21 +5,26 @@ module Clavis
     # Generic provider that can be used as a template for custom providers
     # This class requires all OAuth endpoints to be provided in the configuration
     class Generic < Base
-      attr_reader :auth_endpoint, :token_endpoint_url, :userinfo_endpoint_url, :scopes
+      attr_reader :authorize_endpoint_url, :token_endpoint_url, :userinfo_endpoint_url
 
       def initialize(config = {})
-        @auth_endpoint = config[:authorization_endpoint]
-        @token_endpoint_url = config[:token_endpoint]
-        @userinfo_endpoint_url = config[:userinfo_endpoint]
-        @scopes = config[:scopes]
+        # Validation happens first
+        validate_endpoints_config!(config)
+
+        # These class vars will be derived from config, since we pass it all to super
         @is_openid = config[:openid_provider] || false
 
-        validate_endpoints!
+        # Support both :scope and :scopes for backward compatibility
+        config[:scope] ||= config[:scopes] if config[:scopes]
+
+        # Set provider_name explicitly for generic provider
+        config[:provider_name] = :generic
+
         super
       end
 
       def authorization_endpoint
-        @auth_endpoint
+        @authorize_endpoint_url
       end
 
       def token_endpoint
@@ -31,7 +36,7 @@ module Clavis
       end
 
       def default_scopes
-        @scopes || ""
+        @scope || ""
       end
 
       def openid_provider?
@@ -40,10 +45,16 @@ module Clavis
 
       protected
 
-      def validate_endpoints!
-        raise Clavis::MissingConfiguration, "authorization_endpoint" if @auth_endpoint.nil? || @auth_endpoint.empty?
-        raise Clavis::MissingConfiguration, "token_endpoint" if @token_endpoint_url.nil? || @token_endpoint_url.empty?
-        return unless @userinfo_endpoint_url.nil? || @userinfo_endpoint_url.empty?
+      def validate_endpoints_config!(config)
+        if config[:authorization_endpoint].nil? || config[:authorization_endpoint].empty?
+          raise Clavis::MissingConfiguration,
+                "authorization_endpoint"
+        end
+        if config[:token_endpoint].nil? || config[:token_endpoint].empty?
+          raise Clavis::MissingConfiguration,
+                "token_endpoint"
+        end
+        return unless config[:userinfo_endpoint].nil? || config[:userinfo_endpoint].empty?
 
         raise Clavis::MissingConfiguration, "userinfo_endpoint"
       end

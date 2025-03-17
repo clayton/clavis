@@ -1,0 +1,86 @@
+name: Rails Integration
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    name: Rails Integration
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.1
+          bundler-cache: true
+      
+      - name: Build and install gem
+        run: |
+          rake build
+          gem install pkg/clavis-*.gem
+      
+      - name: Create Rails app
+        run: |
+          gem install rails -v "~> 7.1"
+          rails new test-app --database=postgresql --skip-test --skip-bootsnap
+          cd test-app
+          
+          # Add clavis to Gemfile
+          echo "gem 'clavis', path: '..'" >> Gemfile
+          bundle install
+      
+      - name: Set up database
+        working-directory: test-app
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+          RAILS_ENV: test
+        run: |
+          bin/rails db:create
+          bin/rails db:migrate
+      
+      - name: Generate clavis installation
+        working-directory: test-app
+        run: |
+          bin/rails generate clavis:install
+      
+      - name: Run tests
+        working-directory: test-app
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+          RAILS_ENV: test
+        run: |
+          # Add a basic test
+          mkdir -p test/models
+          echo 'require "test_helper"
+          
+          class ClavisTest < ActiveSupport::TestCase
+            test "clavis is loaded" do
+              assert defined?(Clavis)
+            end
+          end' > test/models/clavis_test.rb
+          
+          # Run the test
+          bin/rails test 

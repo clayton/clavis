@@ -11,7 +11,10 @@ RSpec.describe "Clavis::Security::HttpsEnforcer" do
     {
       client_id: "test-client-id",
       client_secret: "test-client-secret",
-      redirect_uri: http_url
+      redirect_uri: http_url,
+      authorization_endpoint: "https://example.com/auth",
+      token_endpoint: "https://example.com/token",
+      userinfo_endpoint: "https://example.com/userinfo"
     }
   end
 

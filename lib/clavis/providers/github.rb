@@ -2,7 +2,15 @@
 
 module Clavis
   module Providers
-    class GitHub < Base
+    class Github < Base
+      def initialize(config = {})
+        config[:authorization_endpoint] = "https://github.com/login/oauth/authorize"
+        config[:token_endpoint] = "https://github.com/login/oauth/access_token"
+        config[:userinfo_endpoint] = "https://api.github.com/user"
+        config[:scope] = config[:scope] || "user:email"
+        super
+      end
+
       def authorization_endpoint
         "https://github.com/login/oauth/authorize"
       end
@@ -17,6 +25,26 @@ module Clavis
 
       def default_scopes
         "user:email"
+      end
+
+      def get_user_info(access_token)
+        return {} unless userinfo_endpoint
+
+        # Validate inputs
+        raise Clavis::InvalidToken unless Clavis::Security::InputValidator.valid_token?(access_token)
+
+        response = http_client.get(userinfo_endpoint) do |req|
+          req.headers["Authorization"] = "Bearer #{access_token}"
+        end
+
+        if response.status != 200
+          Clavis::Logging.log_userinfo_request(provider_name, false)
+          handle_userinfo_error_response(response)
+        end
+
+        Clavis::Logging.log_userinfo_request(provider_name, true)
+
+        process_userinfo_response(response)
       end
 
       protected

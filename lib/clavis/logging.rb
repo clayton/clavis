@@ -57,6 +57,14 @@ module Clavis
         end
       end
 
+      def log_userinfo_request(provider, success)
+        if success
+          log("Successfully retrieved user info from #{provider}", :info)
+        else
+          log("Failed to retrieve user info from #{provider}", :error)
+        end
+      end
+
       def log_error(error)
         log("Error: #{error.message}", :error)
         log("Backtrace: #{error.backtrace.join("\n")}", :debug) if error.backtrace
