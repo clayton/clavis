@@ -1,4 +1,4 @@
-name: Clavis CI
+name: CI
 
 on:
   push:
@@ -10,20 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        ruby-version:
-          - '3.3.0'
-          - '3.4.1'
-        rails-version:
-          - '7.0'
-          - '7.1'
-        include:
-          - ruby-version: '3.3.0'
-            rails-version: '8.0'
-          
-    name: Ruby ${{ matrix.ruby-version }} | Rails ${{ matrix.rails-version }}
+    name: Build & Test
     
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +18,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby-version }}
+          ruby-version: '3.4.1'
           bundler-cache: false
           
       - name: Install system dependencies
@@ -43,40 +30,19 @@ jobs:
         uses: actions/cache@v3
         with:
           path: vendor/bundle
-          key: ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-${{ hashFiles('**/clavis.gemspec') }}-${{ hashFiles('**/Gemfile.lock') }}-v3
+          key: ${{ runner.os }}-ruby-3.4.1-gems-${{ hashFiles('**/clavis.gemspec') }}-${{ hashFiles('**/Gemfile.lock') }}-v1
           restore-keys: |
-            ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-
+            ${{ runner.os }}-ruby-3.4.1-gems-
             
       - name: Install dependencies
         run: |
           bundle config set --local path vendor/bundle
           bundle config set --local with 'test'
-          
-          # Add the specific Rails version to test with
-          bundle add rails --version "~> ${{ matrix.rails-version }}.0"
           bundle install --jobs 4 --retry 3
           
       - name: Run tests
         run: bundle exec rspec
-  
-  lint:
-    runs-on: ubuntu-latest
-    name: Lint
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.4.1'
-          bundler-cache: false
-          
-      - name: Install dependencies
-        run: |
-          bundle config set --local path vendor/bundle
-          bundle install --jobs 4 --retry 3
-          
+        
       - name: Run RuboCop
         run: bundle exec rubocop
       
