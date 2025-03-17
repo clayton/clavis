@@ -69,11 +69,13 @@ module Clavis
           auth_hash = provider.process_callback(params[:code])
 
           # Verify nonce in ID token if present
-          if auth_hash[:id_token_claims] && auth_hash[:id_token_claims][:nonce] && !Clavis::Security::SessionManager.valid_nonce?(
-            session,
-            auth_hash[:id_token_claims][:nonce],
-            clear_after_validation: true
-          )
+          if auth_hash[:id_token_claims] &&
+             auth_hash[:id_token_claims][:nonce] &&
+             !Clavis::Security::SessionManager.valid_nonce?(
+               session,
+               auth_hash[:id_token_claims][:nonce],
+               clear_after_validation: true
+             )
             raise Clavis::InvalidNonce, "Invalid nonce in ID token"
           end
 
@@ -113,7 +115,9 @@ module Clavis
           case error
           when "access_denied"
             raise Clavis::AuthorizationDenied, description
-          when "invalid_request", "unauthorized_client", "unsupported_response_type", "invalid_scope", "server_error", "temporarily_unavailable"
+          when "invalid_request", "unauthorized_client",
+               "unsupported_response_type", "invalid_scope",
+               "server_error", "temporarily_unavailable"
             raise Clavis::AuthenticationError, description || error
           else
             raise Clavis::AuthenticationError, description || "Unknown error: #{error}"

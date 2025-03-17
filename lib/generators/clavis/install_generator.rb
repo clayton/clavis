@@ -18,7 +18,8 @@ module Clavis
         if ActiveRecord::Base.connection.table_exists?(:users)
           migration_template "migration.rb", "db/migrate/add_oauth_to_users.rb", skip: true
         else
-          say "Skipping migration because users table doesn't exist. Run 'rails g model User' first or create the table manually."
+          say "Skipping migration because users table doesn't exist. " \
+              "Run 'rails g model User' first or create the table manually."
         end
       rescue ActiveRecord::NoDatabaseError
         say "Skipping migration because database doesn't exist. Run 'rails db:create' first."

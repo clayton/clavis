@@ -12,13 +12,14 @@ Gem::Specification.new do |spec|
   spec.description = "A Ruby gem for OIDC and OAuth2. Easily integrate with your favorite identity provider."
   spec.homepage = "https://github.com/claytonlengel/clavis"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.1.0"
+  spec.required_ruby_version = ">= 2.7.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/clayton/clavis"
   spec.metadata["changelog_uri"] = "https://github.com/clayton/clavis/blob/main/CHANGELOG.md"
+  spec.metadata["rubygems_mfa_required"] = "true"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
@@ -38,11 +39,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday", "~> 2.7"
   spec.add_dependency "jwt", "~> 2.7"
 
-  # Development dependencies
-  spec.add_development_dependency "rails", ">= 7.0"
-  spec.add_development_dependency "sqlite3", "~> 1.4"
-
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
-  spec.metadata["rubygems_mfa_required"] = "true"
 end

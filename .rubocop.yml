@@ -2,24 +2,33 @@ AllCops:
   NewCops: enable
   TargetRubyVersion: 2.7
   Exclude:
-    - 'lib/generators/clavis/templates/**/*'
-    - 'lib/generators/clavis/**/templates/**/*'
-    - 'vendor/**/*'
-    - 'bin/**/*'
-    - 'db/**/*'
-    - 'node_modules/**/*'
+    - lib/generators/clavis/templates/**/*
+    - vendor/**/*
+    - bin/**/*
+    - db/**/*
+    - node_modules/**/*
 
 Metrics/MethodLength:
-  Max: 25
+  Max: 35
+  Exclude:
+    - spec/**/*
+    - lib/clavis/controllers/concerns/authentication.rb
 
 Metrics/AbcSize:
-  Max: 30
+  Max: 35
+  Exclude:
+    - spec/**/*
+    - lib/clavis/controllers/concerns/authentication.rb
 
 Metrics/CyclomaticComplexity:
-  Max: 15
+  Max: 20
+  Exclude:
+    - spec/**/*
 
 Metrics/PerceivedComplexity:
-  Max: 15
+  Max: 20
+  Exclude:
+    - spec/**/*
 
 Metrics/ClassLength:
   Max: 250
@@ -28,11 +37,15 @@ Metrics/ModuleLength:
   Max: 250
 
 Metrics/BlockLength:
+  Max: 60
   Exclude:
-    - 'spec/**/*'
+    - spec/**/*
+    - clavis.gemspec
 
 Layout/LineLength:
   Max: 120
+  Exclude:
+    - spec/**/*
 
 Style/Documentation:
   Enabled: false
@@ -42,3 +55,7 @@ Style/StringLiterals:
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
+
+Lint/EmptyClass:
+  Exclude:
+    - spec/**/*

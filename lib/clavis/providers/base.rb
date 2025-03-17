@@ -10,9 +10,10 @@ module Clavis
   module Providers
     class Base
       attr_reader :client_id, :client_secret, :redirect_uri, :authorize_endpoint_url,
-                  :token_endpoint_url, :userinfo_endpoint_url, :scope, :provider_name
+                  :token_endpoint_url, :userinfo_endpoint_url, :scope
 
       def initialize(config = {})
+        @provider_name = self.class.name.split("::").last.downcase.to_sym
         @client_id = config[:client_id] ||
                      ENV["#{provider_name.to_s.upcase}_CLIENT_ID"] ||
                      (Clavis.configuration.use_rails_credentials ? fetch_from_credentials(:client_id) : nil)
@@ -150,7 +151,10 @@ module Clavis
 
         {
           provider: provider_name.to_s,
-          uid: sanitized_user_info[:sub] || sanitized_user_info[:id] || sanitized_user_info["sub"] || sanitized_user_info["id"],
+          uid: sanitized_user_info[:sub] ||
+            sanitized_user_info[:id] ||
+            sanitized_user_info["sub"] ||
+            sanitized_user_info["id"],
           info: sanitized_user_info,
           credentials: {
             token: tokens[:access_token],
@@ -267,12 +271,10 @@ module Clavis
         error_description = data["error_description"] || "Unknown error"
 
         case error
-        when "invalid_request"
+        when "invalid_request", "invalid_grant"
           raise Clavis::InvalidGrant, error_description
         when "invalid_client"
           raise Clavis::ProviderError.new(provider_name, "Invalid client credentials: #{error_description}")
-        when "invalid_grant"
-          raise Clavis::InvalidGrant, error_description
         when "unauthorized_client"
           raise Clavis::ProviderError.new(provider_name, "Unauthorized client: #{error_description}")
         when "unsupported_grant_type"

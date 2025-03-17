@@ -28,6 +28,12 @@ module JSON
   end
 end
 
+# Create a Struct for credentials and config
+CredentialsStruct = Struct.new(:clavis)
+ProvidersStruct = Struct.new(:google)
+GoogleStruct = Struct.new(:client_id, :client_secret)
+ConfigStruct = Struct.new(:filter_parameters)
+
 # Mock Rails for testing
 module Rails
   def self.env
@@ -44,23 +50,18 @@ module Rails
 
   class Application
     def credentials
-      @credentials ||= OpenStruct.new(
-        clavis: {
-          encryption_key: "test_encryption_key_from_credentials",
-          providers: {
-            google: {
-              client_id: "google_client_id_from_credentials",
-              client_secret: "google_client_secret_from_credentials"
-            }
-          }
-        }
-      )
+      @credentials ||= begin
+        google_config = GoogleStruct.new(
+          "google_client_id_from_credentials",
+          "google_client_secret_from_credentials"
+        )
+        providers = ProvidersStruct.new(google_config)
+        CredentialsStruct.new({ encryption_key: "test_encryption_key_from_credentials", providers: providers })
+      end
     end
 
     def config
-      @config ||= OpenStruct.new(
-        filter_parameters: []
-      )
+      @config ||= ConfigStruct.new([])
     end
 
     def respond_to?(method_name)
@@ -111,8 +112,8 @@ class Logger
   def error(message); end
 end
 
-# Mock OpenStruct for testing
-class OpenStruct
+# Custom Hash-like class to replace OpenStruct
+class HashStruct
   def initialize(hash = nil)
     @table = {}
     hash&.each_pair { |k, v| @table[k.to_sym] = v }
@@ -137,9 +138,9 @@ class OpenStruct
   def dig(*keys)
     result = @table
     keys.each do |key|
-      return nil unless result.is_a?(Hash) || result.is_a?(OpenStruct)
+      return nil unless result.is_a?(Hash) || result.is_a?(HashStruct)
 
-      result = result.is_a?(OpenStruct) ? result.send(key) : result[key.to_sym]
+      result = result.is_a?(HashStruct) ? result.send(key) : result[key.to_sym]
       return nil if result.nil?
     end
     result

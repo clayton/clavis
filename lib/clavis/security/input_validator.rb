@@ -109,7 +109,8 @@ module Clavis
           return false unless valid_token?(access_token)
 
           # Validate optional fields if present
-          if (expires_in = response["expires_in"] || response[:expires_in]) && !(expires_in.is_a?(Integer) && expires_in.positive?)
+          if (expires_in = response["expires_in"] || response[:expires_in]) &&
+             !(expires_in.is_a?(Integer) && expires_in.positive?)
             return false
           end
 
@@ -144,7 +145,10 @@ module Clavis
 
           # Sanitize all string values to prevent XSS
           response.each_value do |value|
-            if value.is_a?(String) && (value.include?("<script") || value.include?("javascript:") || value.include?("data:"))
+            if value.is_a?(String) &&
+               (value.include?("<script") ||
+                value.include?("javascript:") ||
+                value.include?("data:"))
               return false
             end
           end

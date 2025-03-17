@@ -44,6 +44,12 @@ RSpec.describe "Clavis::Security::InputValidator" do
       expect(Clavis::Security::InputValidator.valid_token?("")).to be false
       expect(Clavis::Security::InputValidator.valid_token?("<script>alert(1)</script>")).to be false
     end
+
+    it "validates JWT tokens" do
+      sample_jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." \
+                   "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ"
+      expect(Clavis::Security::InputValidator.valid_token?(sample_jwt)).to be true
+    end
   end
 
   describe "code validation" do

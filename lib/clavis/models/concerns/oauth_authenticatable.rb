@@ -30,7 +30,9 @@ module Clavis
             identity.auth_data = auth_hash[:info]
             identity.token = auth_hash[:credentials][:token]
             identity.refresh_token = auth_hash[:credentials][:refresh_token]
-            identity.expires_at = auth_hash[:credentials][:expires_at] ? Time.at(auth_hash[:credentials][:expires_at]) : nil
+            identity.expires_at = if auth_hash[:credentials][:expires_at]
+                                    Time.at(auth_hash[:credentials][:expires_at])
+                                  end
             identity.save!
 
             # Yield to the block if given, to allow customization

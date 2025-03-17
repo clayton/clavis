@@ -21,7 +21,9 @@ module Clavis
             return url if uri.scheme == "https"
 
             # Allow HTTP for localhost in development if configured
-            if localhost?(uri.host) && Clavis.configuration.allow_http_localhost && (defined?(Rails) && !Rails.env.production?)
+            if localhost?(uri.host) &&
+               Clavis.configuration.allow_http_localhost &&
+               (defined?(Rails) && !Rails.env.production?)
               return url
             end
 

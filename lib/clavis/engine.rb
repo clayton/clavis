@@ -40,7 +40,9 @@ module Clavis
       # Log security configuration
       Rails.logger.info("Clavis security features initialized")
       Rails.logger.info("Token encryption: #{Clavis.configuration.encrypt_tokens ? "enabled" : "disabled"}")
-      Rails.logger.info("Parameter filtering: #{Clavis.configuration.parameter_filter_enabled ? "enabled" : "disabled"}")
+      Rails.logger.info("Parameter filtering: #{
+        Clavis.configuration.parameter_filter_enabled ? "enabled" : "disabled"
+      }")
       Rails.logger.info("HTTPS enforcement: #{Clavis.configuration.enforce_https ? "enabled" : "disabled"}")
       Rails.logger.info("SSL verification: #{Clavis.configuration.should_verify_ssl? ? "enabled" : "disabled"}")
       Rails.logger.info("Minimum TLS version: #{Clavis.configuration.minimum_tls_version}")
@@ -93,7 +95,8 @@ module Clavis
 
       # Log redirect URI validation configuration
       if Clavis.configuration.allowed_redirect_hosts.any?
-        Clavis.logger.info "Clavis: Redirect URI validation enabled for hosts: #{Clavis.configuration.allowed_redirect_hosts.join(", ")}"
+        Clavis.logger.info "Clavis: Redirect URI validation enabled for hosts: " \
+                           "#{Clavis.configuration.allowed_redirect_hosts.join(", ")}"
 
         if Clavis.configuration.exact_redirect_uri_matching
           Clavis.logger.info "Clavis: Using exact matching for redirect URIs"
@@ -103,7 +106,8 @@ module Clavis
           Clavis.logger.info "Clavis: Allowing localhost in development environment"
         end
       else
-        Clavis.logger.warn "Clavis: No allowed redirect hosts configured, all redirect URIs will be rejected in production"
+        Clavis.logger.warn "Clavis: No allowed redirect hosts configured, " \
+                           "all redirect URIs will be rejected in production"
       end
 
       # Log HTTPS enforcement configuration
