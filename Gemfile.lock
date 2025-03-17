@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     clavis (0.1.1)
-      activesupport (>= 7.0)
+      activesupport (>= 7.0, < 8.1)
       faraday (~> 2.7)
       jwt (~> 2.7)
 
@@ -251,6 +251,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  activesupport (~> 8.0.0)
   brakeman (~> 6.1)
   clavis!
   ostruct (~> 0.6.0)
@@ -261,4 +262,4 @@ DEPENDENCIES
   sqlite3 (~> 1.4)
 
 BUNDLED WITH
-   2.6.2
+   2.6.6
