@@ -34,6 +34,10 @@ module Clavis
       end
 
       def authorize_url(state:, nonce:, scope: nil)
+        # Validate inputs
+        raise Clavis::InvalidState.new unless Clavis::Security::InputValidator.valid_state?(state)
+        raise Clavis::InvalidNonce.new unless Clavis::Security::InputValidator.valid_state?(nonce)
+
         params = {
           response_type: "code",
           client_id: client_id,
@@ -53,6 +57,13 @@ module Clavis
       end
 
       def token_exchange(code:, expected_state: nil)
+        # Validate inputs
+        raise Clavis::InvalidGrant.new unless Clavis::Security::InputValidator.valid_code?(code)
+
+        if expected_state && !Clavis::Security::InputValidator.valid_state?(expected_state)
+          raise Clavis::InvalidState.new
+        end
+
         params = {
           grant_type: "authorization_code",
           code: code,
@@ -69,10 +80,22 @@ module Clavis
         end
 
         Clavis::Logging.log_token_exchange(provider_name, true)
-        parse_token_response(response)
+
+        # Parse and validate the token response
+        token_data = parse_token_response(response)
+
+        unless Clavis::Security::InputValidator.valid_token_response?(token_data)
+          raise Clavis::InvalidToken.new("Invalid token response format")
+        end
+
+        # Sanitize the token data to prevent XSS
+        Clavis::Security::InputValidator.sanitize_hash(token_data)
       end
 
       def refresh_token(refresh_token)
+        # Validate inputs
+        raise Clavis::InvalidToken.new unless Clavis::Security::InputValidator.valid_token?(refresh_token)
+
         params = {
           grant_type: "refresh_token",
           refresh_token: refresh_token,
@@ -88,10 +111,22 @@ module Clavis
         end
 
         Clavis::Logging.log_token_refresh(provider_name, true)
-        parse_token_response(response)
+
+        # Parse and validate the token response
+        token_data = parse_token_response(response)
+
+        unless Clavis::Security::InputValidator.valid_token_response?(token_data)
+          raise Clavis::InvalidToken.new("Invalid token response format")
+        end
+
+        # Sanitize the token data to prevent XSS
+        Clavis::Security::InputValidator.sanitize_hash(token_data)
       end
 
       def process_callback(code, expected_state = nil)
+        # Validate inputs
+        raise Clavis::InvalidGrant.new unless Clavis::Security::InputValidator.valid_code?(code)
+
         tokens = token_exchange(code: code, expected_state: expected_state)
 
         # Get user info from ID token or userinfo endpoint
@@ -102,12 +137,20 @@ module Clavis
           user_info = get_user_info(tokens[:access_token])
         end
 
+        # Validate the user info
+        unless user_info.is_a?(Hash) && (user_info[:sub] || user_info[:id] || user_info["sub"] || user_info["id"])
+          raise Clavis::InvalidToken.new("Invalid user info format")
+        end
+
         Clavis::Logging.log_authorization_callback(provider_name, true)
+
+        # Sanitize all data to prevent XSS
+        sanitized_user_info = Clavis::Security::InputValidator.sanitize_hash(user_info)
 
         {
           provider: provider_name.to_s,
-          uid: user_info[:sub] || user_info[:id],
-          info: user_info,
+          uid: sanitized_user_info[:sub] || sanitized_user_info[:id] || sanitized_user_info["sub"] || sanitized_user_info["id"],
+          info: sanitized_user_info,
           credentials: {
             token: tokens[:access_token],
             refresh_token: tokens[:refresh_token],
@@ -122,6 +165,9 @@ module Clavis
       def get_user_info(access_token)
         return {} unless userinfo_endpoint
 
+        # Validate inputs
+        raise Clavis::InvalidToken.new unless Clavis::Security::InputValidator.valid_token?(access_token)
+
         response = http_client.get(userinfo_endpoint) do |req|
           req.headers["Authorization"] = "Bearer #{access_token}"
         end
@@ -132,21 +178,34 @@ module Clavis
         end
 
         Clavis::Logging.log_userinfo_request(provider_name, true)
-        response.body
+
+        # Validate and sanitize the response
+        user_info = response.body
+
+        unless Clavis::Security::InputValidator.valid_userinfo_response?(user_info)
+          raise Clavis::InvalidToken.new("Invalid user info format")
+        end
+
+        Clavis::Security::InputValidator.sanitize_hash(user_info)
       end
 
-      def parse_id_token(token)
-        # Basic JWT parsing without validation
-        # In a real implementation, this would validate the token
-        segments = token.split(".")
+      def parse_id_token(id_token)
+        # Validate the ID token
+        raise Clavis::InvalidToken.new unless Clavis::Security::InputValidator.valid_token?(id_token)
 
-        raise Clavis::InvalidToken.new("Invalid JWT format") if segments.length != 3
+        # Basic JWT parsing (without validation)
+        parts = id_token.split(".")
+        return {} if parts.length < 2
 
-        JSON.parse(Base64.urlsafe_decode64(segments[1]))
-      rescue JSON::ParserError
-        raise Clavis::InvalidToken.new("Invalid JWT payload")
-      rescue ArgumentError
-        raise Clavis::InvalidToken.new("Invalid JWT encoding")
+        begin
+          json = Base64.urlsafe_decode64(parts[1] + "=" * ((4 - parts[1].length % 4) % 4))
+          claims = JSON.parse(json)
+
+          # Sanitize the claims to prevent XSS
+          Clavis::Security::InputValidator.sanitize_hash(claims)
+        rescue StandardError
+          {}
+        end
       end
 
       # These methods should be implemented by subclasses
@@ -188,52 +247,56 @@ module Clavis
       end
 
       def parse_token_response(response)
-        data = JSON.parse(response.body, symbolize_names: true)
+        data = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body)
 
         {
-          access_token: data[:access_token],
-          token_type: data[:token_type],
-          expires_in: data[:expires_in],
-          refresh_token: data[:refresh_token],
-          id_token: data[:id_token],
-          expires_at: data[:expires_in] ? Time.now.to_i + data[:expires_in].to_i : nil
+          access_token: data["access_token"],
+          token_type: data["token_type"],
+          expires_in: data["expires_in"],
+          refresh_token: data["refresh_token"],
+          id_token: data["id_token"],
+          expires_at: data["expires_in"] ? Time.now.to_i + data["expires_in"].to_i : nil
         }
       end
 
       def handle_token_error_response(response)
-        raise Clavis::ProviderAPIError.new(provider_name, "HTTP #{response.status}") unless response.status == 400
+        data = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body)
 
-        begin
-          error_data = JSON.parse(response.body)
-          error_code = error_data["error"]
+        error = data["error"] || "unknown_error"
+        error_description = data["error_description"] || "Unknown error"
 
-          case error_code
-          when "invalid_grant"
-            raise Clavis::InvalidGrant.new(error_data["error_description"])
-          when "invalid_client"
-            raise Clavis::ConfigurationError.new("Invalid client credentials")
-          else
-            raise Clavis::TokenError.new(error_data["error_description"])
-          end
-        rescue JSON::ParserError
-          raise Clavis::TokenError.new("Invalid response from token endpoint")
+        case error
+        when "invalid_request"
+          raise Clavis::InvalidGrant.new(error_description)
+        when "invalid_client"
+          raise Clavis::ProviderError.new(provider_name, "Invalid client credentials: #{error_description}")
+        when "invalid_grant"
+          raise Clavis::InvalidGrant.new(error_description)
+        when "unauthorized_client"
+          raise Clavis::ProviderError.new(provider_name, "Unauthorized client: #{error_description}")
+        when "unsupported_grant_type"
+          raise Clavis::UnsupportedOperation.new(error_description)
+        when "invalid_scope"
+          raise Clavis::ProviderError.new(provider_name, "Invalid scope: #{error_description}")
+        else
+          raise Clavis::ProviderError.new(provider_name, "#{error}: #{error_description}")
         end
       end
 
-      def process_userinfo_response(response)
-        JSON.parse(response.body, symbolize_names: true)
+      def handle_userinfo_error_response(_response)
+        raise Clavis::InvalidAccessToken.new
       end
 
       def process_id_token_claims(claims)
         {
           sub: claims["sub"],
-          name: claims["name"],
           email: claims["email"],
           email_verified: claims["email_verified"],
+          name: claims["name"],
           given_name: claims["given_name"],
           family_name: claims["family_name"],
           picture: claims["picture"]
-        }
+        }.compact
       end
 
       def openid_scope?(scope)
@@ -241,7 +304,7 @@ module Clavis
       end
 
       def to_query(params)
-        params.map { |k, v| "#{k}=#{CGI.escape(v.to_s)}" }.join("&")
+        params.map { |k, v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.to_s)}" }.join("&")
       end
     end
   end

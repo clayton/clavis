@@ -86,6 +86,36 @@ Clavis.configure do |config|
 end
 ```
 
+### Input Validation
+
+Clavis validates and sanitizes all inputs by default. This helps prevent injection attacks and other security vulnerabilities.
+
+```ruby
+# In config/initializers/clavis.rb
+Clavis.configure do |config|
+  # Enable input validation (enabled by default)
+  config.validate_inputs = true
+  
+  # Enable input sanitization (enabled by default)
+  config.sanitize_inputs = true
+end
+```
+
+### Session Management
+
+Clavis includes secure session management features, including session rotation after authentication to prevent session fixation attacks.
+
+```ruby
+# In config/initializers/clavis.rb
+Clavis.configure do |config|
+  # Enable session rotation after login (enabled by default)
+  config.rotate_session_after_login = true
+  
+  # Set prefix for session keys (default: 'clavis')
+  config.session_key_prefix = 'clavis'
+end
+```
+
 ## Model Security
 
 ### ActiveRecord Encryption
@@ -130,6 +160,25 @@ end
 
 ## Controller Security
 
+### Using the Authentication Controller Generator
+
+Clavis provides a generator to create a secure authentication controller:
+
+```bash
+rails generate clavis:controller Auth
+```
+
+This will create:
+- An `AuthController` with secure OAuth methods
+- A login view with OAuth provider buttons
+- Routes for OAuth authentication
+
+You can customize the controller name:
+
+```bash
+rails generate clavis:controller Authentication
+```
+
 ### CSRF Protection
 
 Clavis includes built-in CSRF protection for OAuth flows. The state parameter is automatically generated and validated.
@@ -161,14 +210,58 @@ def oauth_callback
   # Process OAuth callback
   
   # Get the redirect URL from the session
-  redirect_url = session.delete(:oauth_redirect_url) || root_path
-  
-  # Validate the redirect URL
-  Clavis::Security::RedirectUriValidator.validate_uri!(redirect_url)
+  redirect_url = Clavis::Security::SessionManager.validate_and_retrieve_redirect_uri(
+    session,
+    default: root_path
+  )
   
   # Redirect to the validated URL
   redirect_to redirect_url
 end
+```
+
+### Session Rotation
+
+Clavis automatically rotates the session ID after authentication to prevent session fixation attacks:
+
+```ruby
+# In your controller
+def oauth_callback
+  # Process OAuth callback
+  
+  # Rotate the session ID (done automatically by Clavis)
+  # You can preserve specific keys during rotation
+  Clavis::Security::SessionManager.rotate_session_id(
+    session,
+    SecureRandom.hex(32),
+    preserve_keys: [:user_id, :return_to]
+  )
+  
+  # Redirect to a safe URL
+  redirect_to dashboard_path
+end
+```
+
+## Input Validation and Sanitization
+
+Clavis provides comprehensive input validation and sanitization:
+
+```ruby
+# Validate a URL
+if Clavis::Security::InputValidator.valid_url?(params[:redirect_uri])
+  # URL is valid
+end
+
+# Validate a token
+if Clavis::Security::InputValidator.valid_token?(params[:token])
+  # Token is valid
+end
+
+# Sanitize user input
+safe_input = Clavis::Security::InputValidator.sanitize(params[:user_input])
+
+# Sanitize a hash of user inputs
+safe_params = Clavis::Security::InputValidator.sanitize_hash(params.to_unsafe_h)
 ```
 
 ## General Security Recommendations

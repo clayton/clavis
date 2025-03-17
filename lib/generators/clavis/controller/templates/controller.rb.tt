@@ -1,0 +1,177 @@
+# frozen_string_literal: true
+
+class <%= class_name %>Controller < ApplicationController
+  include Clavis::Controllers::Concerns::Authentication
+  
+  # Skip CSRF protection for callback action since OAuth providers will redirect to it
+  # The OAuth flow has its own CSRF protection via the state parameter
+  skip_before_action :verify_authenticity_token, only: [:callback]
+  
+  # Skip authentication for OAuth actions
+  skip_before_action :authenticate_user!, only: [:login, :authorize, :callback, :failure], if: -> { respond_to?(:authenticate_user!) }
+  
+  # Login page with OAuth provider buttons
+  def login
+    # If user is already logged in, redirect to root path
+    redirect_to after_login_path if current_user
+  end
+  
+  # Start OAuth flow
+  def authorize
+    # Store the return_to path in the session if provided
+    if params[:return_to].present?
+      Clavis::Security::SessionManager.store_redirect_uri(session, params[:return_to])
+    end
+    
+    # Start the OAuth flow
+    oauth_authorize
+  rescue => e
+    handle_error(e)
+  end
+  
+  # OAuth callback
+  def callback
+    oauth_callback do |user, auth_hash|
+      # Find or create user from OAuth data
+      @user = find_or_create_user(auth_hash)
+      
+      # Sign in the user
+      sign_in_user(@user)
+      
+      # Redirect to the stored redirect URI or default path
+      redirect_uri = Clavis::Security::SessionManager.validate_and_retrieve_redirect_uri(
+        session,
+        default: after_login_path
+      )
+      
+      redirect_to redirect_uri
+    end
+  rescue => e
+    handle_error(e)
+  end
+  
+  # OAuth failure
+  def failure
+    message = params[:message] || "Authentication failed"
+    flash[:alert] = Clavis::Security::InputValidator.sanitize(message)
+    redirect_to login_path
+  end
+  
+  # Logout
+  def logout
+    sign_out_user
+    redirect_to after_logout_path
+  end
+  
+  private
+  
+  # Find or create a user from OAuth data
+  def find_or_create_user(auth_hash)
+    # Find existing identity
+    identity = OauthIdentity.find_by(
+      provider: auth_hash[:provider],
+      uid: auth_hash[:uid]
+    )
+    
+    if identity&.user
+      # Update the identity with new token information
+      identity.update(
+        token: auth_hash[:credentials][:token],
+        refresh_token: auth_hash[:credentials][:refresh_token],
+        expires_at: auth_hash[:credentials][:expires_at]
+      )
+      
+      return identity.user
+    else
+      # Create a new user and identity
+      user = User.create_from_oauth(auth_hash)
+      
+      # Create the identity
+      OauthIdentity.create(
+        user: user,
+        provider: auth_hash[:provider],
+        uid: auth_hash[:uid],
+        token: auth_hash[:credentials][:token],
+        refresh_token: auth_hash[:credentials][:refresh_token],
+        expires_at: auth_hash[:credentials][:expires_at]
+      )
+      
+      return user
+    end
+  end
+  
+  # Sign in a user
+  def sign_in_user(user)
+    # This should be implemented based on your authentication system
+    # For Devise:
+    # sign_in(user)
+    
+    # For a simple session-based authentication:
+    session[:user_id] = user.id
+  end
+  
+  # Sign out a user
+  def sign_out_user
+    # This should be implemented based on your authentication system
+    # For Devise:
+    # sign_out
+    
+    # For a simple session-based authentication:
+    session.delete(:user_id)
+    
+    # Clear the session
+    reset_session
+  end
+  
+  # Path to redirect to after successful login
+  def after_login_path
+    root_path
+  end
+  
+  # Path to redirect to after logout
+  def after_logout_path
+    login_path
+  end
+  
+  # Handle errors
+  def handle_error(error)
+    case error
+    when Clavis::AuthorizationDenied
+      flash[:alert] = "Authorization denied: #{error.message}"
+      redirect_to login_path
+    when Clavis::InvalidState
+      flash[:alert] = "Invalid state parameter. Please try again."
+      redirect_to login_path
+    when Clavis::InvalidGrant
+      flash[:alert] = "Invalid authorization code. Please try again."
+      redirect_to login_path
+    when Clavis::InvalidNonce
+      flash[:alert] = "Invalid nonce parameter. Please try again."
+      redirect_to login_path
+    when Clavis::InvalidRedirectUri
+      flash[:alert] = "Invalid redirect URI. Please try again."
+      redirect_to login_path
+    when Clavis::ProviderError
+      flash[:alert] = "Provider error: #{error.message}"
+      redirect_to login_path
+    else
+      # Log the error
+      Rails.logger.error("OAuth Error: #{error.class.name} - #{error.message}")
+      Rails.logger.error(error.backtrace.join("\n"))
+      
+      flash[:alert] = "An error occurred during authentication. Please try again."
+      redirect_to login_path
+    end
+  end
+  
+  # Current user helper
+  def current_user
+    # This should be implemented based on your authentication system
+    # For Devise:
+    # current_user
+    
+    # For a simple session-based authentication:
+    @current_user ||= User.find_by(id: session[:user_id]) if session[:user_id]
+  end
+  helper_method :current_user
+end 

@@ -6,7 +6,8 @@ module Clavis
                   :encrypt_tokens, :encryption_key, :use_rails_credentials, :parameter_filter_enabled,
                   :allowed_redirect_hosts, :exact_redirect_uri_matching, :allow_localhost_in_development,
                   :raise_on_invalid_redirect, :enforce_https, :allow_http_localhost, :verify_ssl,
-                  :minimum_tls_version
+                  :minimum_tls_version, :validate_inputs, :sanitize_inputs, :rotate_session_after_login,
+                  :session_key_prefix
 
     def initialize
       @providers = {}
@@ -32,6 +33,14 @@ module Clavis
       @allow_http_localhost = true
       @verify_ssl = true
       @minimum_tls_version = :TLS1_2
+
+      # Input validation configuration
+      @validate_inputs = true
+      @sanitize_inputs = true
+
+      # Session management configuration
+      @rotate_session_after_login = true
+      @session_key_prefix = "clavis"
     end
 
     def provider_configured?(provider_name)

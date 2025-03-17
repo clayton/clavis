@@ -11,6 +11,8 @@ require_relative "clavis/security/parameter_filter"
 require_relative "clavis/security/csrf_protection"
 require_relative "clavis/security/redirect_uri_validator"
 require_relative "clavis/security/https_enforcer"
+require_relative "clavis/security/input_validator"
+require_relative "clavis/security/session_manager"
 
 # Only load provider classes if they're not already defined (for testing)
 unless defined?(Clavis::Providers::Base)

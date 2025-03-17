@@ -52,4 +52,12 @@ Clavis.configure do |config|
   # config.allow_http_localhost = true # Allow HTTP for localhost in development
   # config.verify_ssl = true # Verify SSL certificates
   # config.minimum_tls_version = :TLS1_2 # Minimum TLS version
+  
+  # Input validation (enabled by default)
+  # config.validate_inputs = true # Validate all inputs
+  # config.sanitize_inputs = true # Sanitize all inputs
+  
+  # Session management (enabled by default)
+  # config.rotate_session_after_login = true # Rotate session ID after login
+  # config.session_key_prefix = 'clavis' # Prefix for session keys
 end 

@@ -12,16 +12,14 @@ module Clavis
           provider_name = params[:provider]
           provider = Clavis.provider(provider_name)
 
-          # Validate redirect URI if provided
+          # Validate and store redirect URI if provided
           if params[:redirect_uri].present?
-            Clavis::Security::RedirectUriValidator.validate_uri!(params[:redirect_uri])
-            # Store the validated redirect URI in the session for later use
-            session[:oauth_redirect_uri] = params[:redirect_uri]
+            Clavis::Security::SessionManager.store_redirect_uri(session, params[:redirect_uri])
           end
 
           # Generate and store state and nonce in session
-          state = Clavis::Security::CsrfProtection.store_state_in_session(self)
-          nonce = Clavis::Security::CsrfProtection.store_nonce_in_session(self)
+          state = Clavis::Security::SessionManager.generate_and_store_state(session)
+          nonce = Clavis::Security::SessionManager.generate_and_store_nonce(session)
 
           # Log parameters safely
           Clavis::Security::ParameterFilter.log_parameters(
@@ -30,10 +28,14 @@ module Clavis
             message: "Starting OAuth flow"
           )
 
+          # Validate inputs
+          scope = params[:scope] || Clavis.configuration.default_scopes
+          Clavis::Security::InputValidator.sanitize(scope)
+
           redirect_to provider.authorize_url(
             state: state,
             nonce: nonce,
-            scope: params[:scope] || Clavis.configuration.default_scopes
+            scope: scope
           )
         end
 
@@ -54,30 +56,48 @@ module Clavis
           end
 
           # Verify state parameter to prevent CSRF
-          Clavis::Security::CsrfProtection.validate_state_from_session!(self, params[:state])
+          unless Clavis::Security::SessionManager.valid_state?(session, params[:state], clear_after_validation: true)
+            raise Clavis::InvalidState.new("Invalid state parameter")
+          end
+
+          # Validate code parameter
+          unless Clavis::Security::InputValidator.valid_code?(params[:code])
+            raise Clavis::InvalidGrant.new("Invalid authorization code")
+          end
 
           provider = Clavis.provider(provider_name)
           auth_hash = provider.process_callback(params[:code])
 
           # Verify nonce in ID token if present
-          if auth_hash[:id_token_claims] && auth_hash[:id_token_claims][:nonce]
-            Clavis::Security::CsrfProtection.validate_nonce_from_session!(
-              self,
-              auth_hash[:id_token_claims][:nonce]
-            )
+          if auth_hash[:id_token_claims] && auth_hash[:id_token_claims][:nonce] && !Clavis::Security::SessionManager.valid_nonce?(
+            session,
+            auth_hash[:id_token_claims][:nonce],
+            clear_after_validation: true
+          )
+            raise Clavis::InvalidNonce.new("Invalid nonce in ID token")
           end
 
           user = find_or_create_user_from_oauth(auth_hash)
+
+          # Rotate session ID to prevent session fixation
+          if defined?(request) && request.respond_to?(:session) && request.session.respond_to?(:id)
+            new_session_id = SecureRandom.hex(32)
+            Clavis::Security::SessionManager.rotate_session_id(
+              session,
+              new_session_id,
+              preserve_keys: [:user_id]
+            )
+          end
 
           # Let the application handle the user authentication
           if block_given?
             yield(user, auth_hash)
           else
             # Default behavior: redirect to the stored redirect URI or root path
-            redirect_uri = session.delete(:oauth_redirect_uri) || "/"
-
-            # Validate the redirect URI again before redirecting
-            Clavis::Security::RedirectUriValidator.validate_uri!(redirect_uri)
+            redirect_uri = Clavis::Security::SessionManager.validate_and_retrieve_redirect_uri(
+              session,
+              default: "/"
+            )
 
             redirect_to redirect_uri
           end
@@ -86,6 +106,10 @@ module Clavis
         private
 
         def handle_oauth_error(error, description = nil)
+          # Sanitize error parameters
+          error = Clavis::Security::InputValidator.sanitize(error)
+          description = Clavis::Security::InputValidator.sanitize(description) if description
+
           case error
           when "access_denied"
             raise Clavis::AuthorizationDenied.new(description)

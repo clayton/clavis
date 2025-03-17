@@ -1,0 +1,145 @@
+<div class="oauth-login-container">
+  <h1>Sign in with</h1>
+  
+  <% if flash[:alert] %>
+    <div class="alert alert-danger">
+      <%= flash[:alert] %>
+    </div>
+  <% end %>
+  
+  <div class="oauth-providers">
+    <% if Clavis.configuration.providers[:google] %>
+      <a href="<%= auth_path(:google) %>" class="oauth-button google-button">
+        <span class="provider-icon">G</span>
+        <span class="provider-name">Google</span>
+      </a>
+    <% end %>
+    
+    <% if Clavis.configuration.providers[:github] %>
+      <a href="<%= auth_path(:github) %>" class="oauth-button github-button">
+        <span class="provider-icon">GH</span>
+        <span class="provider-name">GitHub</span>
+      </a>
+    <% end %>
+    
+    <% if Clavis.configuration.providers[:facebook] %>
+      <a href="<%= auth_path(:facebook) %>" class="oauth-button facebook-button">
+        <span class="provider-icon">F</span>
+        <span class="provider-name">Facebook</span>
+      </a>
+    <% end %>
+    
+    <% if Clavis.configuration.providers[:apple] %>
+      <a href="<%= auth_path(:apple) %>" class="oauth-button apple-button">
+        <span class="provider-icon">A</span>
+        <span class="provider-name">Apple</span>
+      </a>
+    <% end %>
+    
+    <% if Clavis.configuration.providers[:microsoft] %>
+      <a href="<%= auth_path(:microsoft) %>" class="oauth-button microsoft-button">
+        <span class="provider-icon">M</span>
+        <span class="provider-name">Microsoft</span>
+      </a>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .oauth-login-container {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  }
+  
+  .oauth-login-container h1 {
+    margin-bottom: 2rem;
+    font-weight: 500;
+  }
+  
+  .alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+  }
+  
+  .alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  
+  .oauth-providers {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .oauth-button {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+  
+  .provider-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 1rem;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .google-button {
+    background-color: #4285F4;
+    color: white;
+  }
+  
+  .google-button:hover {
+    background-color: #3367D6;
+  }
+  
+  .github-button {
+    background-color: #24292e;
+    color: white;
+  }
+  
+  .github-button:hover {
+    background-color: #1a1e22;
+  }
+  
+  .facebook-button {
+    background-color: #1877F2;
+    color: white;
+  }
+  
+  .facebook-button:hover {
+    background-color: #166fe5;
+  }
+  
+  .apple-button {
+    background-color: #000000;
+    color: white;
+  }
+  
+  .apple-button:hover {
+    background-color: #1a1a1a;
+  }
+  
+  .microsoft-button {
+    background-color: #00a4ef;
+    color: white;
+  }
+  
+  .microsoft-button:hover {
+    background-color: #0078d4;
+  }
+</style> 
