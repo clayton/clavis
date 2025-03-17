@@ -29,13 +29,22 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: true
+          bundler-cache: false
           
+      - name: Setup bundle cache
+        uses: actions/cache@v3
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-${{ hashFiles('**/Gemfile.lock') }}-v1
+          restore-keys: |
+            ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-
+            
       - name: Install dependencies
         run: |
-          bundle config set --local without 'development'
+          bundle config set --local path vendor/bundle
+          bundle config set --local with 'test'
           bundle add activesupport --version "~> ${{ matrix.rails-version }}.0"
-          bundle install
+          bundle install --jobs 4 --retry 3
           
       - name: Run tests
         run: bundle exec rspec 

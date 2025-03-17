@@ -18,6 +18,7 @@ jobs:
         with:
           ruby-version: 3.4.1
           bundler-cache: true
+          cache-version: 1
       - name: Run RuboCop
         run: bundle exec rubocop
 
@@ -31,10 +32,9 @@ jobs:
         with:
           ruby-version: 3.4.1
           bundler-cache: true
-      - name: Install Brakeman
-        run: gem install brakeman
+          cache-version: 1
       - name: Run Brakeman
-        run: bundle exec brakeman -z --no-exit-on-warn --no-exit-on-error
+        run: bundle exec rake brakeman
 
   test:
     runs-on: ubuntu-latest
@@ -46,5 +46,10 @@ jobs:
         with:
           ruby-version: 3.4.1
           bundler-cache: true
+          cache-version: 1
+      - name: Install dependencies
+        run: |
+          bundle config set --local with 'development test'
+          bundle install --jobs 4 --retry 3
       - name: Run tests
         run: bundle exec rspec 

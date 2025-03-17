@@ -1,0 +1,28 @@
+#!/bin/bash
+# Helper script to run GitHub Actions locally with act
+# Usage: bin/act [job-name] [additional-args]
+
+set -e
+
+# Default workflow file
+WORKFLOW=".github/workflows/ci_local.yml"
+
+# Check if first argument is a job name
+if [ $# -ge 1 ] && [ "${1:0:1}" != "-" ]; then
+  JOB="$1"
+  shift
+  JOB_ARG="-j $JOB"
+else
+  JOB_ARG=""
+fi
+
+# Basic set of arguments that work for macOS
+ACT_ARGS="--container-architecture linux/amd64 -P ubuntu-latest=ruby:3.4.1-slim --container-daemon-socket - --network bridge"
+
+echo "Running act with workflow: $WORKFLOW"
+if [ -n "$JOB_ARG" ]; then
+  echo "Job: $JOB"
+fi
+
+# Run act with the workflow file and arguments
+act -W "$WORKFLOW" $JOB_ARG $ACT_ARGS "$@" 

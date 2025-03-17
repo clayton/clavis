@@ -39,6 +39,13 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday", "~> 2.7"
   spec.add_dependency "jwt", "~> 2.7"
 
+  # Development dependencies
+  spec.add_development_dependency "brakeman", "~> 6.1"
+  spec.add_development_dependency "ostruct", "~> 0.6.0"
+  spec.add_development_dependency "rake", "~> 13.0"
+  spec.add_development_dependency "rspec", "~> 3.0"
+  spec.add_development_dependency "rubocop", "~> 1.21"
+
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
 end

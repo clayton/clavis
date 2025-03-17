@@ -1,0 +1,4 @@
+-P ubuntu-latest=node:16-buster-slim
+-P ubuntu-24.04=node:16-buster-slim
+--container-architecture linux/amd64
+-b 
