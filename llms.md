@@ -44,7 +44,7 @@ Clavis is a Ruby gem that implements the OAuth 2.0 and OpenID Connect (OIDC) pro
 4. **User Management**
    - Model concern for mapping OAuth/OIDC responses to user records
    - Configurable user creation and updating
-   - Support for handling multiple providers per user (future)
+   - Support for handling multiple providers per user
 
 5. **View Components**
    - Button helpers with SVG icons for popular providers
@@ -54,7 +54,7 @@ Clavis is a Ruby gem that implements the OAuth 2.0 and OpenID Connect (OIDC) pro
 6. **Rails Integration**
    - Rails engine for routes and assets
    - Generators for controllers, views, and migrations
-   - Seamless integration with Rails 8 authentication
+   - Seamless integration with existing authentication systems
 
 ## Implementation Details
 
@@ -355,41 +355,14 @@ end
 class User < ApplicationRecord
   include Clavis::Models::OauthAuthenticatable
   
-  # Override the default behavior
+  # Customize user creation from OAuth data
   def self.find_for_oauth(auth_hash)
-    # Find user by provider/uid or email
-    user = find_by(provider: auth_hash[:provider], uid: auth_hash[:uid]) || 
-           find_by(email: auth_hash[:info][:email])
-    
-    if user.nil?
-      # Create a new user
-      user = new(
-        provider: auth_hash[:provider],
-        uid: auth_hash[:uid],
-        email: auth_hash[:info][:email],
-        name: auth_hash[:info][:name],
-        password: SecureRandom.hex(20) # Generate a secure random password
-      )
-      
-      # Add any additional user setup
-      user.skip_confirmation! if user.respond_to?(:skip_confirmation!)
-      user.save!
-      
-      # Create user profile
-      UserProfile.create!(
-        user: user,
-        avatar_url: auth_hash[:info][:image],
-        display_name: auth_hash[:info][:nickname] || auth_hash[:info][:name]
-      )
-    elsif user.provider.nil? || user.uid.nil?
-      # Existing user is connecting an OAuth account for the first time
-      user.update!(
-        provider: auth_hash[:provider],
-        uid: auth_hash[:uid]
-      )
+    super do |user, auth|
+      # Set additional user attributes based on the auth data
+      user.name = auth[:info][:name]
+      user.email = auth[:info][:email]
+      user.avatar_url = auth[:info][:image] if user.respond_to?(:avatar_url)
     end
-    
-    user
   end
 end
 ```
@@ -407,7 +380,7 @@ end
 <%= oauth_button :apple, data: { analytics_event: "apple_login_click" } %>
 
 <%# Completely custom button with same authorization flow %>
-<%= link_to auth_authorize_path(:google), class: "my-fancy-button" do %>
+<%= link_to auth_path(:google), class: "my-fancy-button" do %>
   <i class="custom-icon"></i> Google Login
 <% end %>
 ```
@@ -582,8 +555,7 @@ RSpec.describe "OAuth Authentication", type: :feature do
     # Verify user was created
     user = User.find_by(email: 'user@example.com')
     expect(user).not_to be_nil
-    expect(user.provider).to eq('google')
-    expect(user.uid).to eq('123456')
+    expect(user.oauth_identity_for('google')).to be_present
   end
 end
 ```
@@ -620,21 +592,16 @@ end
      - Verify correct signing keys are being used
      - Check for token expiration issues
 
-### Logging Guidance
+5. **View Helper Issues**
+   - **Symptoms**: Undefined method `oauth_button` errors
+   - **Solutions**:
+     - Ensure `include Clavis::ViewHelpers` is in your ApplicationHelper
+     - Check that the Clavis engine is properly mounted
+     - Restart your Rails server to ensure initializers are loaded
 
-To debug authentication issues, enable detailed logging:
+### Integration with Existing Authentication
 
-```ruby
-# config/environments/development.rb
-Rails.application.configure do
-  config.log_level = :debug
-end
-
-# config/initializers/clavis.rb
-Clavis.configure do |config|
-  config.verbose_logging = true
-end
-```
+For issues integrating with existing authentication systems, see the detailed guide in `/docs/integration.md`.
 
 ## API Reference
 
