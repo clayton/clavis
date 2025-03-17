@@ -29,5 +29,27 @@ Clavis.configure do |config|
   
   # Optional: Configure logging
   # config.logger = Rails.logger
-  # config.log_level = :info
+  # config.verbose_logging = false
+  
+  # Security configuration
+  
+  # Token encryption (disabled by default)
+  # config.encrypt_tokens = true
+  # config.encryption_key = ENV['CLAVIS_ENCRYPTION_KEY'] # Must be at least 32 bytes
+  # config.use_rails_credentials = true # Use Rails credentials for encryption key and provider config
+  
+  # Parameter filtering (enabled by default)
+  # config.parameter_filter_enabled = true
+  
+  # Redirect URI validation
+  # config.allowed_redirect_hosts = ['your-app.com'] # Add your app's domain(s)
+  # config.exact_redirect_uri_matching = false # Set to true for exact matching
+  # config.allow_localhost_in_development = true
+  # config.raise_on_invalid_redirect = true
+  
+  # HTTPS enforcement (enabled by default)
+  # config.enforce_https = true # Force HTTPS for all OAuth URLs
+  # config.allow_http_localhost = true # Allow HTTP for localhost in development
+  # config.verify_ssl = true # Verify SSL certificates
+  # config.minimum_tls_version = :TLS1_2 # Minimum TLS version
 end 

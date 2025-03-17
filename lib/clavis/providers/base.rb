@@ -28,6 +28,11 @@ module Clavis
         self.class.name.split("::").last.downcase.to_sym
       end
 
+      def redirect_uri
+        # Enforce HTTPS for redirect URI
+        Clavis::Security::HttpsEnforcer.enforce_https(@redirect_uri)
+      end
+
       def authorize_url(state:, nonce:, scope: nil)
         params = {
           response_type: "code",
@@ -42,7 +47,9 @@ module Clavis
 
         Clavis::Logging.log_authorization_request(provider_name, params)
 
-        "#{authorization_endpoint}?#{to_query(params)}"
+        # Enforce HTTPS for authorization endpoint
+        auth_url = "#{authorization_endpoint}?#{to_query(params)}"
+        Clavis::Security::HttpsEnforcer.enforce_https(auth_url)
       end
 
       def token_exchange(code:, expected_state: nil)
@@ -84,7 +91,7 @@ module Clavis
         parse_token_response(response)
       end
 
-      def process_callback(code, expected_state)
+      def process_callback(code, expected_state = nil)
         tokens = token_exchange(code: code, expected_state: expected_state)
 
         # Get user info from ID token or userinfo endpoint
@@ -98,26 +105,34 @@ module Clavis
         Clavis::Logging.log_authorization_callback(provider_name, true)
 
         {
-          provider: provider_name,
+          provider: provider_name.to_s,
           uid: user_info[:sub] || user_info[:id],
           info: user_info,
           credentials: {
             token: tokens[:access_token],
             refresh_token: tokens[:refresh_token],
             expires_at: tokens[:expires_at],
-            expires: tokens[:expires_at] ? true : false
-          }
+            expires: tokens[:expires_at].present?
+          },
+          id_token: tokens[:id_token],
+          id_token_claims: id_token_data
         }
       end
 
       def get_user_info(access_token)
+        return {} unless userinfo_endpoint
+
         response = http_client.get(userinfo_endpoint) do |req|
           req.headers["Authorization"] = "Bearer #{access_token}"
         end
 
-        raise Clavis::InvalidAccessToken.new if response.status != 200
+        if response.status != 200
+          Clavis::Logging.log_userinfo_request(provider_name, false)
+          handle_userinfo_error_response(response)
+        end
 
-        process_userinfo_response(response)
+        Clavis::Logging.log_userinfo_request(provider_name, true)
+        response.body
       end
 
       def parse_id_token(token)
@@ -148,7 +163,7 @@ module Clavis
       end
 
       def default_scopes
-        ""
+        Clavis.configuration.default_scopes || "email"
       end
 
       def openid_provider?
@@ -168,10 +183,8 @@ module Clavis
       end
 
       def http_client
-        Faraday.new do |conn|
-          conn.request :url_encoded
-          conn.adapter Faraday.default_adapter
-        end
+        # Use the HTTPS enforcer to create a secure HTTP client
+        Clavis::Security::HttpsEnforcer.create_http_client
       end
 
       def parse_token_response(response)

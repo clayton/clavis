@@ -34,6 +34,12 @@ module Clavis
     end
   end
 
+  class ProviderNotConfigured < ProviderError
+    def initialize(provider)
+      super("Provider not configured: #{provider}")
+    end
+  end
+
   # Authorization errors
   class AuthorizationError < Error; end
 
@@ -53,6 +59,31 @@ module Clavis
   class MissingState < AuthorizationError
     def initialize
       super("Missing state parameter in callback")
+    end
+  end
+
+  class InvalidNonce < AuthorizationError
+    def initialize
+      super("Invalid nonce in ID token")
+    end
+  end
+
+  class MissingNonce < AuthorizationError
+    def initialize
+      super("Missing nonce in ID token or session")
+    end
+  end
+
+  class InvalidRedirectUri < AuthorizationError
+    def initialize(uri)
+      super("Invalid redirect URI: #{uri}")
+    end
+  end
+
+  # Authentication errors
+  class AuthenticationError < Error
+    def initialize(message = "Authentication failed")
+      super(message)
     end
   end
 

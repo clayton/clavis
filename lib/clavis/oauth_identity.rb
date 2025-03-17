@@ -11,6 +11,28 @@ module Clavis
 
     serialize :auth_data, JSON
 
+    # Override token getter to decrypt the token
+    def token
+      Clavis::Security::TokenStorage.decrypt(self[:token])
+    end
+
+    # Override token setter to encrypt the token
+    def token=(value)
+      encrypted_token = Clavis::Security::TokenStorage.encrypt(value)
+      self[:token] = encrypted_token
+    end
+
+    # Override refresh_token getter to decrypt the token
+    def refresh_token
+      Clavis::Security::TokenStorage.decrypt(self[:refresh_token])
+    end
+
+    # Override refresh_token setter to encrypt the token
+    def refresh_token=(value)
+      encrypted_token = Clavis::Security::TokenStorage.encrypt(value)
+      self[:refresh_token] = encrypted_token
+    end
+
     def token_expired?
       expires_at.present? && expires_at < Time.current
     end
