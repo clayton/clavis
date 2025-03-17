@@ -39,11 +39,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config libsqlite3-dev
           
+      - name: Adjust ActiveSupport version for test
+        run: |
+          # Update the activesupport dependency in the gemspec to match the current test
+          sed -i "s/spec.add_dependency \"activesupport\", .*$/spec.add_dependency \"activesupport\", \"~> ${{ matrix.rails-version }}.0\"/g" clavis.gemspec
+          
       - name: Setup bundle cache
         uses: actions/cache@v3
         with:
           path: vendor/bundle
-          key: ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-${{ hashFiles('**/Gemfile.lock') }}-v1
+          key: ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-${{ hashFiles('**/clavis.gemspec') }}-${{ hashFiles('**/Gemfile.lock') }}-v2
           restore-keys: |
             ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-
             
@@ -51,7 +56,6 @@ jobs:
         run: |
           bundle config set --local path vendor/bundle
           bundle config set --local with 'test'
-          bundle add activesupport --version "~> ${{ matrix.rails-version }}.0"
           bundle install --jobs 4 --retry 3
           
       - name: Run tests
