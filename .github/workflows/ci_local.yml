@@ -1,11 +1,9 @@
 name: CI Local
 
+# This workflow is only for local testing with act
+# It will not run automatically on GitHub
 on:
-  push:
-    branches:
-      - master
-      - main
-  pull_request:
+  workflow_dispatch: # Manual trigger only, won't run automatically
 
 jobs:
   test:
