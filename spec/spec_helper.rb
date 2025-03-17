@@ -3,6 +3,9 @@
 require "rspec"
 require "logger"
 require "ostruct"
+require "active_support/core_ext/numeric/time"
+require "active_support/core_ext/integer/time"
+require "active_support/core_ext/time/calculations"
 
 # Load mocks for testing
 require_relative "support/mocks"

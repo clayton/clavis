@@ -10,7 +10,7 @@ module Clavis
   module Providers
     class Base
       attr_reader :client_id, :client_secret, :redirect_uri, :authorize_endpoint_url,
-                  :token_endpoint_url, :userinfo_endpoint_url, :scope
+                  :token_endpoint_url, :userinfo_endpoint_url, :scope, :provider_name
 
       def initialize(config = {})
         @provider_name = self.class.name.split("::").last.downcase.to_sym

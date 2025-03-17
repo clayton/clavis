@@ -28,6 +28,17 @@ module JSON
   end
 end
 
+# Mock JWT for Apple provider testing
+module JWT
+  def self.encode(_payload, _key, _algorithm)
+    "mock-jwt-token"
+  end
+
+  def self.decode(_token, _key, _verify, _options = {})
+    [{ "sub" => "123456789" }, { "alg" => "RS256" }]
+  end
+end
+
 # Create a Struct for credentials and config
 CredentialsStruct = Struct.new(:clavis)
 ProvidersStruct = Struct.new(:google)

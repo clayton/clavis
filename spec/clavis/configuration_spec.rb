@@ -103,6 +103,8 @@ RSpec.describe Clavis::Configuration do
       end
 
       before do
+        # Disable Rails credentials usage
+        configuration.use_rails_credentials = false
         configuration.providers = { google: provider_config }
       end
 

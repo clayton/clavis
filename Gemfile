@@ -11,6 +11,8 @@ gem "rspec", "~> 3.0"
 
 gem "rubocop", "~> 1.21"
 
+gem "ostruct", "~> 0.6.0"
+
 # Development dependencies moved from gemspec
 gem "rails", ">= 7.0", group: :development
 gem "sqlite3", "~> 1.4", group: :development
