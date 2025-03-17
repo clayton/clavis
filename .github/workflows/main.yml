@@ -54,3 +54,23 @@ jobs:
           else
             echo "No app directory found, skipping Brakeman"
           fi
+      
+      - name: Build gem
+        run: bundle exec rake build
+        
+      - name: Verify gem builds correctly
+        run: |
+          VERSION=$(ruby -r ./lib/clavis/version.rb -e "puts Clavis::VERSION")
+          GEM_FILE="pkg/clavis-$VERSION.gem"
+          if [ ! -f "$GEM_FILE" ]; then
+            echo "Gem file not found: $GEM_FILE"
+            exit 1
+          fi
+          echo "Gem built successfully: $GEM_FILE"
+      
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: gem-package
+          path: pkg/*.gem
+          retention-days: 7
