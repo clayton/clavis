@@ -1,0 +1,4 @@
+[Clavis] Authorization request initiated for provider: google
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/google/callback", scope: "openid email profile", state: "test-state", nonce: "test-nonce"}
+[Clavis] Authorization request initiated for provider: google
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/google/callback", scope: "email", state: "test-state"}

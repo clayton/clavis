@@ -11,6 +11,12 @@ require_relative "clavis/controllers/concerns/authentication"
 require_relative "clavis/models/concerns/oauth_authenticatable"
 require_relative "clavis/view_helpers"
 
+# Only load Rails-specific code if Rails is defined
+if defined?(Rails)
+  require_relative "clavis/engine"
+  require_relative "generators/clavis/install_generator" if defined?(Rails::Generators)
+end
+
 module Clavis
   class << self
     attr_writer :configuration

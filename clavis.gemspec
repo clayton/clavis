@@ -38,6 +38,10 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday", "~> 2.7"
   spec.add_dependency "jwt", "~> 2.7"
 
+  # Development dependencies
+  spec.add_development_dependency "rails", ">= 7.0"
+  spec.add_development_dependency "sqlite3", "~> 1.4"
+
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
 end
