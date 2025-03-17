@@ -94,8 +94,8 @@ end
 Clavis requires a table to store OAuth identities. The migration should have created a table like this:
 
 ```ruby
-create_table :oauth_identities do |t|
-  t.references :user, null: false, foreign_key: true
+create_table :clavis_oauth_identities do |t|
+  t.references :user, polymorphic: true, null: false, index: true
   t.string :provider, null: false
   t.string :uid, null: false
   t.json :auth_data
@@ -107,6 +107,89 @@ create_table :oauth_identities do |t|
   t.index [:provider, :uid], unique: true
 end
 ```
+
+## Integrating with Existing Authentication
+
+If you already have an authentication system in your application, follow these steps to integrate Clavis:
+
+1. **Configure Clavis** as shown in the Basic Configuration section.
+
+2. **Run the installation generator**:
+   ```bash
+   rails generate clavis:install
+   rails db:migrate
+   ```
+
+3. **Include the OauthAuthenticatable module** in your User model:
+   ```ruby
+   # app/models/user.rb
+   class User < ApplicationRecord
+     include Clavis::Models::OauthAuthenticatable
+     
+     # Your existing authentication code
+     has_secure_password
+     
+     # Optional: Customize how OAuth users are created/found
+     def self.find_for_oauth(auth_hash)
+       super do |user, auth|
+         # Set additional user attributes from auth data
+         user.name = auth[:info][:name] if user.respond_to?(:name=)
+         # Any other attribute assignments...
+       end
+     end
+   end
+   ```
+
+4. **Create or modify your authentication controller**:
+   ```ruby
+   # app/controllers/sessions_controller.rb
+   class SessionsController < ApplicationController
+     include Clavis::Controllers::Concerns::Authentication
+     
+     # Your existing login/logout actions...
+     
+     # Add OAuth callback handler
+     def oauth_callback
+       auth_hash = process_callback(params[:provider])
+       
+       # Find or create a user with the OAuth data
+       @user = User.find_for_oauth(auth_hash)
+       
+       # Sign in the user (using your existing authentication system)
+       session[:user_id] = @user.id
+       
+       redirect_to root_path, notice: "Signed in successfully!"
+     rescue Clavis::AuthenticationError => e
+       redirect_to login_path, alert: "Authentication failed: #{e.message}"
+     end
+   end
+   ```
+
+5. **Add routes for OAuth authentication**:
+   ```ruby
+   # config/routes.rb
+   Rails.application.routes.draw do
+     # Your existing routes...
+     
+     # OAuth routes
+     get '/auth/:provider', to: 'sessions#oauth_authorize', as: :auth
+     get '/auth/:provider/callback', to: 'sessions#oauth_callback'
+   end
+   ```
+
+6. **Add OAuth buttons to your login page**:
+   ```erb
+   <%# app/views/sessions/new.html.erb %>
+   <h1>Sign In</h1>
+   
+   <%# Your existing login form... %>
+   
+   <div class="oauth-buttons">
+     <p>Or sign in with:</p>
+     <%= oauth_button :google %>
+     <%= oauth_button :github %>
+   </div>
+   ```
 
 ## Controller Integration
 

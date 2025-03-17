@@ -20,6 +20,13 @@ module Clavis
       ActiveSupport.on_load(:action_view) do
         include Clavis::ViewHelpers
       end
+
+      # Make ViewHelpers available to ApplicationHelper
+      ActiveSupport.on_load(:after_initialize) do
+        if defined?(ApplicationHelper) && !ApplicationHelper.included_modules.include?(Clavis::ViewHelpers)
+          ApplicationHelper.include(Clavis::ViewHelpers)
+        end
+      end
     end
 
     initializer "clavis.logger" do

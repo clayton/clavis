@@ -19,5 +19,28 @@ RSpec.describe "Clavis::Generators::InstallGenerator", rails: true do
     # - File generation (initializer, migration)
     # - Content of generated files
     # - Proper namespacing and configuration options
+
+    # Expected files:
+    # - config/initializers/clavis.rb
+    # - db/migrate/*_create_clavis_oauth_identities.rb
+    # - db/migrate/*_add_oauth_to_users.rb (if users table exists)
+  end
+
+  it "properly handles the clavis_oauth_identities table" do
+    skip "This test requires a Rails environment"
+
+    # In a Rails environment, we would test:
+    # - Migration creates the table with correct structure
+    # - Polymorphic association to user
+    # - Indexes for performance and constraints
+  end
+
+  it "provides clear post-installation instructions" do
+    skip "This test requires a Rails environment"
+
+    # In a Rails environment, we would test:
+    # - Clear output message with next steps
+    # - Instructions for model integration
+    # - Instructions for view integration
   end
 end

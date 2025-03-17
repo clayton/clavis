@@ -30,6 +30,15 @@ require_relative "clavis/models/concerns/oauth_authenticatable"
 require_relative "clavis/controllers/concerns/authentication"
 require_relative "clavis/view_helpers"
 
+# Create an alias for backward compatibility
+module Clavis
+  module Models
+    # Alias for Clavis::Models::Concerns::OauthAuthenticatable
+    # This makes it easier to include in user models as documented
+    OauthAuthenticatable = Concerns::OauthAuthenticatable
+  end
+end
+
 # Only load the engine if Rails is defined and we're not in a test environment
 begin
   require_relative "clavis/engine" if defined?(Rails) && !defined?(RSpec)
