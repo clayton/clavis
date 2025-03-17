@@ -19,6 +19,9 @@ jobs:
         rails-version:
           - '7.0'
           - '7.1'
+        include:
+          - ruby-version: '3.3.0'
+            rails-version: '8.0'
           
     name: Ruby ${{ matrix.ruby-version }} | Rails ${{ matrix.rails-version }}
     
