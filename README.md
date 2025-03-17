@@ -34,7 +34,7 @@ Clavis is a Ruby gem that provides an easy-to-use implementation of OIDC (OpenID
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'clavis'
+gem 'clavis', '~> 0.2.0'
 ```
 
 And then execute:
