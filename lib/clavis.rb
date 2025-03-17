@@ -7,6 +7,10 @@ require_relative "clavis/configuration"
 require_relative "clavis/utils/secure_token"
 require_relative "clavis/providers/base"
 require_relative "clavis/providers/google"
+require_relative "clavis/providers/github"
+require_relative "clavis/providers/apple"
+require_relative "clavis/providers/facebook"
+require_relative "clavis/providers/microsoft"
 require_relative "clavis/controllers/concerns/authentication"
 require_relative "clavis/models/concerns/oauth_authenticatable"
 require_relative "clavis/view_helpers"
@@ -55,3 +59,7 @@ end
 
 # Register built-in providers
 Clavis.register_provider(:google, Clavis::Providers::Google)
+Clavis.register_provider(:github, Clavis::Providers::GitHub)
+Clavis.register_provider(:apple, Clavis::Providers::Apple)
+Clavis.register_provider(:facebook, Clavis::Providers::Facebook)
+Clavis.register_provider(:microsoft, Clavis::Providers::Microsoft)
