@@ -45,7 +45,7 @@ module Clavis
           req.params["fields"] = "id,name,email,first_name,last_name,picture"
         end
 
-        raise Clavis::InvalidAccessToken.new if response.status != 200
+        raise Clavis::InvalidAccessToken if response.status != 200
 
         process_userinfo_response(response)
       end

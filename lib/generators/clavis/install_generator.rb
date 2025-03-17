@@ -46,7 +46,7 @@ module Clavis
 
         config[:migration_template] = true
         config[:skip] = false
-        super(source, destination, config)
+        super
       end
 
       def migration_exists?(dir, name)

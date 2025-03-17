@@ -56,7 +56,7 @@ module Clavis
     def validate_provider!(provider_name)
       return if provider_configured?(provider_name)
 
-      raise Clavis::ProviderNotConfigured.new(provider_name)
+      raise Clavis::ProviderNotConfigured, provider_name
     end
 
     def provider_config(provider_name)

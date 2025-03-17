@@ -35,7 +35,7 @@ module Rails
   end
 
   def self.logger
-    @logger ||= Logger.new(STDOUT).tap { |l| l.level = Logger::WARN }
+    @logger ||= Logger.new($stdout).tap { |l| l.level = Logger::WARN }
   end
 
   def self.application

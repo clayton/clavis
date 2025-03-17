@@ -6,13 +6,13 @@ module Clavis
   module Security
     module InputValidator
       # Regular expressions for validation
-      TOKEN_REGEX = /\A[a-zA-Z0-9\-_.]+\z/
-      CODE_REGEX = /\A[a-zA-Z0-9\-_.]+\z/
-      STATE_REGEX = /\A[a-zA-Z0-9\-_.]+\z/
-      EMAIL_REGEX = /\A[\w+\-.]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
+      TOKEN_REGEX = /\A[a-zA-Z0-9\-_.]+\z/.freeze
+      CODE_REGEX = /\A[a-zA-Z0-9\-_.]+\z/.freeze
+      STATE_REGEX = /\A[a-zA-Z0-9\-_.]+\z/.freeze
+      EMAIL_REGEX = /\A[\w+\-.]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i.freeze
 
       # Dangerous schemes that should never be allowed
-      DANGEROUS_SCHEMES = %w[javascript data vbscript file]
+      DANGEROUS_SCHEMES = %w[javascript data vbscript file].freeze
 
       class << self
         # Validates a URL
@@ -109,7 +109,7 @@ module Clavis
           return false unless valid_token?(access_token)
 
           # Validate optional fields if present
-          if (expires_in = response["expires_in"] || response[:expires_in]) && !(expires_in.is_a?(Integer) && expires_in > 0)
+          if (expires_in = response["expires_in"] || response[:expires_in]) && !(expires_in.is_a?(Integer) && expires_in.positive?)
             return false
           end
 
@@ -143,7 +143,7 @@ module Clavis
           end
 
           # Sanitize all string values to prevent XSS
-          response.each do |_key, value|
+          response.each_value do |value|
             if value.is_a?(String) && (value.include?("<script") || value.include?("javascript:") || value.include?("data:"))
               return false
             end

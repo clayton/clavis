@@ -18,8 +18,8 @@ module Clavis
         # @raise [Clavis::MissingState] If either state is nil
         # @raise [Clavis::InvalidState] If the states don't match
         def validate_state!(actual_state, expected_state)
-          raise Clavis::MissingState.new if actual_state.nil? || expected_state.nil?
-          raise Clavis::InvalidState.new unless actual_state == expected_state
+          raise Clavis::MissingState if actual_state.nil? || expected_state.nil?
+          raise Clavis::InvalidState unless actual_state == expected_state
         end
 
         # Stores a state token in the Rails session
@@ -67,8 +67,8 @@ module Clavis
         def validate_nonce_from_session!(controller, id_token_nonce)
           expected_nonce = controller.session[:oauth_nonce]
 
-          raise Clavis::MissingNonce.new if id_token_nonce.nil? || expected_nonce.nil?
-          raise Clavis::InvalidNonce.new unless id_token_nonce == expected_nonce
+          raise Clavis::MissingNonce if id_token_nonce.nil? || expected_nonce.nil?
+          raise Clavis::InvalidNonce unless id_token_nonce == expected_nonce
 
           # Clear the nonce from the session after validation
           controller.session.delete(:oauth_nonce)

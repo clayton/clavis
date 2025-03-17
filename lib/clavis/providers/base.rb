@@ -4,23 +4,30 @@ require "faraday"
 require "json"
 require "base64"
 require "cgi"
+require "uri"
 
 module Clavis
   module Providers
     class Base
-      attr_reader :client_id, :client_secret, :redirect_uri
+      attr_reader :client_id, :client_secret, :redirect_uri, :authorize_endpoint_url,
+                  :token_endpoint_url, :userinfo_endpoint_url, :scope, :provider_name
 
       def initialize(config = {})
         @client_id = config[:client_id] ||
-                     ENV["CLAVIS_#{provider_name.upcase}_CLIENT_ID"] ||
-                     (defined?(Rails) && Rails.application.credentials.dig(:clavis, provider_name, :client_id))
+                     ENV["#{provider_name.to_s.upcase}_CLIENT_ID"] ||
+                     (Clavis.configuration.use_rails_credentials ? fetch_from_credentials(:client_id) : nil)
 
         @client_secret = config[:client_secret] ||
-                         ENV["CLAVIS_#{provider_name.upcase}_CLIENT_SECRET"] ||
-                         (defined?(Rails) && Rails.application.credentials.dig(:clavis, provider_name, :client_secret))
+                         ENV["#{provider_name.to_s.upcase}_CLIENT_SECRET"] ||
+                         (Clavis.configuration.use_rails_credentials ? fetch_from_credentials(:client_secret) : nil)
 
-        @redirect_uri = config[:redirect_uri]
+        @redirect_uri = config[:redirect_uri] ||
+                        ENV["#{provider_name.to_s.upcase}_REDIRECT_URI"] ||
+                        (Clavis.configuration.use_rails_credentials ? fetch_from_credentials(:redirect_uri) : nil)
 
+        @scope = config[:scope] || "email profile"
+
+        setup_endpoints(config)
         validate_configuration!
       end
 
@@ -28,41 +35,35 @@ module Clavis
         self.class.name.split("::").last.downcase.to_sym
       end
 
-      def redirect_uri
-        # Enforce HTTPS for redirect URI
-        Clavis::Security::HttpsEnforcer.enforce_https(@redirect_uri)
-      end
-
       def authorize_url(state:, nonce:, scope: nil)
-        # Validate inputs
-        raise Clavis::InvalidState.new unless Clavis::Security::InputValidator.valid_state?(state)
-        raise Clavis::InvalidNonce.new unless Clavis::Security::InputValidator.valid_state?(nonce)
+        # Validate state and nonce
+        raise Clavis::InvalidState unless Clavis::Security::InputValidator.valid_state?(state)
+        raise Clavis::InvalidNonce unless Clavis::Security::InputValidator.valid_state?(nonce)
 
+        # Build authorization URL
+        uri = URI.parse(authorize_endpoint_url)
         params = {
-          response_type: "code",
           client_id: client_id,
-          redirect_uri: redirect_uri,
-          scope: scope || default_scopes,
-          state: state
+          redirect_uri: Clavis::Security::HttpsEnforcer.enforce_https(redirect_uri),
+          response_type: "code",
+          state: state,
+          nonce: nonce,
+          scope: scope || @scope
         }
 
-        # Add nonce for OIDC
-        params[:nonce] = nonce if openid_scope?(scope || default_scopes)
+        # Add provider-specific params
+        params.merge!(additional_authorize_params)
 
-        Clavis::Logging.log_authorization_request(provider_name, params)
-
-        # Enforce HTTPS for authorization endpoint
-        auth_url = "#{authorization_endpoint}?#{to_query(params)}"
-        Clavis::Security::HttpsEnforcer.enforce_https(auth_url)
+        # Encode and append params to the URL
+        uri.query = URI.encode_www_form(params)
+        uri.to_s
       end
 
       def token_exchange(code:, expected_state: nil)
         # Validate inputs
-        raise Clavis::InvalidGrant.new unless Clavis::Security::InputValidator.valid_code?(code)
+        raise Clavis::InvalidGrant unless Clavis::Security::InputValidator.valid_code?(code)
 
-        if expected_state && !Clavis::Security::InputValidator.valid_state?(expected_state)
-          raise Clavis::InvalidState.new
-        end
+        raise Clavis::InvalidState if expected_state && !Clavis::Security::InputValidator.valid_state?(expected_state)
 
         params = {
           grant_type: "authorization_code",
@@ -72,7 +73,7 @@ module Clavis
           client_secret: client_secret
         }
 
-        response = http_client.post(token_endpoint, params)
+        response = http_client.post(token_endpoint_url, params)
 
         if response.status != 200
           Clavis::Logging.log_token_exchange(provider_name, false)
@@ -85,7 +86,7 @@ module Clavis
         token_data = parse_token_response(response)
 
         unless Clavis::Security::InputValidator.valid_token_response?(token_data)
-          raise Clavis::InvalidToken.new("Invalid token response format")
+          raise Clavis::InvalidToken, "Invalid token response format"
         end
 
         # Sanitize the token data to prevent XSS
@@ -94,7 +95,7 @@ module Clavis
 
       def refresh_token(refresh_token)
         # Validate inputs
-        raise Clavis::InvalidToken.new unless Clavis::Security::InputValidator.valid_token?(refresh_token)
+        raise Clavis::InvalidToken unless Clavis::Security::InputValidator.valid_token?(refresh_token)
 
         params = {
           grant_type: "refresh_token",
@@ -103,7 +104,7 @@ module Clavis
           client_secret: client_secret
         }
 
-        response = http_client.post(token_endpoint, params)
+        response = http_client.post(token_endpoint_url, params)
 
         if response.status != 200
           Clavis::Logging.log_token_refresh(provider_name, false)
@@ -116,7 +117,7 @@ module Clavis
         token_data = parse_token_response(response)
 
         unless Clavis::Security::InputValidator.valid_token_response?(token_data)
-          raise Clavis::InvalidToken.new("Invalid token response format")
+          raise Clavis::InvalidToken, "Invalid token response format"
         end
 
         # Sanitize the token data to prevent XSS
@@ -125,7 +126,7 @@ module Clavis
 
       def process_callback(code, expected_state = nil)
         # Validate inputs
-        raise Clavis::InvalidGrant.new unless Clavis::Security::InputValidator.valid_code?(code)
+        raise Clavis::InvalidGrant unless Clavis::Security::InputValidator.valid_code?(code)
 
         tokens = token_exchange(code: code, expected_state: expected_state)
 
@@ -139,7 +140,7 @@ module Clavis
 
         # Validate the user info
         unless user_info.is_a?(Hash) && (user_info[:sub] || user_info[:id] || user_info["sub"] || user_info["id"])
-          raise Clavis::InvalidToken.new("Invalid user info format")
+          raise Clavis::InvalidToken, "Invalid user info format"
         end
 
         Clavis::Logging.log_authorization_callback(provider_name, true)
@@ -163,12 +164,12 @@ module Clavis
       end
 
       def get_user_info(access_token)
-        return {} unless userinfo_endpoint
+        return {} unless userinfo_endpoint_url
 
         # Validate inputs
-        raise Clavis::InvalidToken.new unless Clavis::Security::InputValidator.valid_token?(access_token)
+        raise Clavis::InvalidToken unless Clavis::Security::InputValidator.valid_token?(access_token)
 
-        response = http_client.get(userinfo_endpoint) do |req|
+        response = http_client.get(userinfo_endpoint_url) do |req|
           req.headers["Authorization"] = "Bearer #{access_token}"
         end
 
@@ -183,7 +184,7 @@ module Clavis
         user_info = response.body
 
         unless Clavis::Security::InputValidator.valid_userinfo_response?(user_info)
-          raise Clavis::InvalidToken.new("Invalid user info format")
+          raise Clavis::InvalidToken, "Invalid user info format"
         end
 
         Clavis::Security::InputValidator.sanitize_hash(user_info)
@@ -191,14 +192,14 @@ module Clavis
 
       def parse_id_token(id_token)
         # Validate the ID token
-        raise Clavis::InvalidToken.new unless Clavis::Security::InputValidator.valid_token?(id_token)
+        raise Clavis::InvalidToken unless Clavis::Security::InputValidator.valid_token?(id_token)
 
         # Basic JWT parsing (without validation)
         parts = id_token.split(".")
         return {} if parts.length < 2
 
         begin
-          json = Base64.urlsafe_decode64(parts[1] + "=" * ((4 - parts[1].length % 4) % 4))
+          json = Base64.urlsafe_decode64(parts[1] + ("=" * ((4 - (parts[1].length % 4)) % 4)))
           claims = JSON.parse(json)
 
           # Sanitize the claims to prevent XSS
@@ -232,13 +233,13 @@ module Clavis
       protected
 
       def validate_configuration!
-        raise Clavis::MissingConfiguration.new("client_id for #{provider_name}") if @client_id.nil? || @client_id.empty?
+        raise Clavis::MissingConfiguration, "client_id for #{provider_name}" if @client_id.nil? || @client_id.empty?
         if @client_secret.nil? || @client_secret.empty?
-          raise Clavis::MissingConfiguration.new("client_secret for #{provider_name}")
+          raise Clavis::MissingConfiguration, "client_secret for #{provider_name}"
         end
         return unless @redirect_uri.nil? || @redirect_uri.empty?
 
-        raise Clavis::MissingConfiguration.new("redirect_uri for #{provider_name}")
+        raise Clavis::MissingConfiguration, "redirect_uri for #{provider_name}"
       end
 
       def http_client
@@ -267,15 +268,15 @@ module Clavis
 
         case error
         when "invalid_request"
-          raise Clavis::InvalidGrant.new(error_description)
+          raise Clavis::InvalidGrant, error_description
         when "invalid_client"
           raise Clavis::ProviderError.new(provider_name, "Invalid client credentials: #{error_description}")
         when "invalid_grant"
-          raise Clavis::InvalidGrant.new(error_description)
+          raise Clavis::InvalidGrant, error_description
         when "unauthorized_client"
           raise Clavis::ProviderError.new(provider_name, "Unauthorized client: #{error_description}")
         when "unsupported_grant_type"
-          raise Clavis::UnsupportedOperation.new(error_description)
+          raise Clavis::UnsupportedOperation, error_description
         when "invalid_scope"
           raise Clavis::ProviderError.new(provider_name, "Invalid scope: #{error_description}")
         else
@@ -284,7 +285,7 @@ module Clavis
       end
 
       def handle_userinfo_error_response(_response)
-        raise Clavis::InvalidAccessToken.new
+        raise Clavis::InvalidAccessToken
       end
 
       def process_id_token_claims(claims)
@@ -300,11 +301,21 @@ module Clavis
       end
 
       def openid_scope?(scope)
-        scope.to_s.split(" ").include?("openid")
+        scope.to_s.split.include?("openid")
       end
 
       def to_query(params)
         params.map { |k, v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.to_s)}" }.join("&")
+      end
+
+      def setup_endpoints(config)
+        @authorize_endpoint_url = config[:authorize_endpoint] || authorization_endpoint
+        @token_endpoint_url = config[:token_endpoint] || token_endpoint
+        @userinfo_endpoint_url = config[:userinfo_endpoint] || userinfo_endpoint
+      end
+
+      def additional_authorize_params
+        {}
       end
     end
   end

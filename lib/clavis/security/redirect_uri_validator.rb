@@ -65,7 +65,7 @@ module Clavis
         def validate_uri!(uri)
           is_valid = valid_uri?(uri)
 
-          raise Clavis::InvalidRedirectUri.new(uri) if !is_valid && Clavis.configuration.raise_on_invalid_redirect
+          raise Clavis::InvalidRedirectUri, uri if !is_valid && Clavis.configuration.raise_on_invalid_redirect
 
           is_valid
         end
@@ -78,7 +78,7 @@ module Clavis
         def validate_provider_uri!(provider_name, uri)
           is_valid = valid_provider_uri?(provider_name, uri)
 
-          raise Clavis::InvalidRedirectUri.new(uri) if !is_valid && Clavis.configuration.raise_on_invalid_redirect
+          raise Clavis::InvalidRedirectUri, uri if !is_valid && Clavis.configuration.raise_on_invalid_redirect
 
           is_valid
         end

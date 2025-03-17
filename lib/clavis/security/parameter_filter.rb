@@ -39,7 +39,7 @@ module Clavis
         # Installs the parameter filter in Rails if available
         # This should be called during initialization
         def install_rails_filter
-          return unless defined?(Rails) && Rails.application&.config&.respond_to?(:filter_parameters)
+          return unless defined?(Rails) && Rails.application&.config.respond_to?(:filter_parameters)
 
           Rails.application.config.filter_parameters.concat(SENSITIVE_PARAMETERS)
           Clavis.logger.info("Installed Clavis parameter filters in Rails")

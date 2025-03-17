@@ -70,7 +70,7 @@ module Clavis
                        when :generic
                          Providers::Generic
                        else
-                         raise UnsupportedProvider.new(name)
+                         raise UnsupportedProvider, name
                        end
 
       # Merge options with configuration

@@ -15,7 +15,7 @@ module Clavis
         @is_openid = config[:openid_provider] || false
 
         validate_endpoints!
-        super(config)
+        super
       end
 
       def authorization_endpoint
@@ -41,13 +41,11 @@ module Clavis
       protected
 
       def validate_endpoints!
-        raise Clavis::MissingConfiguration.new("authorization_endpoint") if @auth_endpoint.nil? || @auth_endpoint.empty?
-        if @token_endpoint_url.nil? || @token_endpoint_url.empty?
-          raise Clavis::MissingConfiguration.new("token_endpoint")
-        end
+        raise Clavis::MissingConfiguration, "authorization_endpoint" if @auth_endpoint.nil? || @auth_endpoint.empty?
+        raise Clavis::MissingConfiguration, "token_endpoint" if @token_endpoint_url.nil? || @token_endpoint_url.empty?
         return unless @userinfo_endpoint_url.nil? || @userinfo_endpoint_url.empty?
 
-        raise Clavis::MissingConfiguration.new("userinfo_endpoint")
+        raise Clavis::MissingConfiguration, "userinfo_endpoint"
       end
     end
   end

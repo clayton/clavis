@@ -26,7 +26,7 @@ RSpec.describe "Clavis::Security::SessionManager" do
       Clavis::Security::SessionManager.store(session, :test_key, "test_value")
 
       # Check that the value is stored with a namespaced key
-      expect(session["clavis_test_key".to_sym]).to eq("test_value")
+      expect(session[:clavis_test_key]).to eq("test_value")
     end
 
     it "deletes values from the session" do

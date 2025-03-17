@@ -163,7 +163,7 @@ module Clavis
         # @param key [Symbol] The key to namespace
         # @return [Symbol] The namespaced key
         def namespaced_key(key)
-          "#{Clavis.configuration.session_key_prefix}_#{key}".to_sym
+          :"#{Clavis.configuration.session_key_prefix}_#{key}"
         end
       end
     end

@@ -57,12 +57,12 @@ module Clavis
 
           # Verify state parameter to prevent CSRF
           unless Clavis::Security::SessionManager.valid_state?(session, params[:state], clear_after_validation: true)
-            raise Clavis::InvalidState.new("Invalid state parameter")
+            raise Clavis::InvalidState, "Invalid state parameter"
           end
 
           # Validate code parameter
           unless Clavis::Security::InputValidator.valid_code?(params[:code])
-            raise Clavis::InvalidGrant.new("Invalid authorization code")
+            raise Clavis::InvalidGrant, "Invalid authorization code"
           end
 
           provider = Clavis.provider(provider_name)
@@ -74,7 +74,7 @@ module Clavis
             auth_hash[:id_token_claims][:nonce],
             clear_after_validation: true
           )
-            raise Clavis::InvalidNonce.new("Invalid nonce in ID token")
+            raise Clavis::InvalidNonce, "Invalid nonce in ID token"
           end
 
           user = find_or_create_user_from_oauth(auth_hash)
@@ -112,11 +112,11 @@ module Clavis
 
           case error
           when "access_denied"
-            raise Clavis::AuthorizationDenied.new(description)
+            raise Clavis::AuthorizationDenied, description
           when "invalid_request", "unauthorized_client", "unsupported_response_type", "invalid_scope", "server_error", "temporarily_unavailable"
-            raise Clavis::AuthenticationError.new(description || error)
+            raise Clavis::AuthenticationError, description || error
           else
-            raise Clavis::AuthenticationError.new(description || "Unknown error: #{error}")
+            raise Clavis::AuthenticationError, description || "Unknown error: #{error}"
           end
         end
 

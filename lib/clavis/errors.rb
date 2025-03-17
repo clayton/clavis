@@ -83,7 +83,7 @@ module Clavis
   # Authentication errors
   class AuthenticationError < Error
     def initialize(message = "Authentication failed")
-      super(message)
+      super
     end
   end
 
@@ -92,7 +92,7 @@ module Clavis
 
   class InvalidToken < TokenError
     def initialize(message = "Invalid token")
-      super(message)
+      super
     end
   end
 
@@ -104,7 +104,7 @@ module Clavis
 
   class InvalidGrant < TokenError
     def initialize(message = "Invalid grant")
-      super(message)
+      super
     end
   end
 
@@ -126,7 +126,7 @@ module Clavis
 
   class UserCreationFailed < UserError
     def initialize(message = "Failed to create user")
-      super(message)
+      super
     end
   end
 
