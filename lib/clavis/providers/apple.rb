@@ -7,6 +7,26 @@ require "openssl"
 module Clavis
   module Providers
     class Apple < Base
+      attr_reader :team_id, :key_id, :private_key
+
+      def initialize(config = {})
+        super(config)
+
+        @team_id = config[:team_id] ||
+                   ENV["CLAVIS_APPLE_TEAM_ID"] ||
+                   (defined?(Rails) && Rails.application.credentials.dig(:clavis, :apple, :team_id))
+
+        @key_id = config[:key_id] ||
+                  ENV["CLAVIS_APPLE_KEY_ID"] ||
+                  (defined?(Rails) && Rails.application.credentials.dig(:clavis, :apple, :key_id))
+
+        @private_key = config[:private_key] ||
+                       ENV["CLAVIS_APPLE_PRIVATE_KEY"] ||
+                       (defined?(Rails) && Rails.application.credentials.dig(:clavis, :apple, :private_key))
+
+        validate_apple_configuration!
+      end
+
       def authorization_endpoint
         "https://appleid.apple.com/auth/authorize"
       end
@@ -27,6 +47,10 @@ module Clavis
 
       def openid_provider?
         true
+      end
+
+      def refresh_token(_refresh_token)
+        raise Clavis::UnsupportedOperation.new("Apple does not support refresh tokens")
       end
 
       def token_exchange(code:, expected_state: nil)
@@ -50,7 +74,19 @@ module Clavis
         parse_token_response(response)
       end
 
+      def get_user_info(_access_token)
+        # Apple doesn't have a userinfo endpoint
+        # This method should not be called directly
+        raise Clavis::UnsupportedOperation.new("Apple does not have a userinfo endpoint")
+      end
+
       protected
+
+      def validate_apple_configuration!
+        raise Clavis::MissingConfiguration.new("team_id for Apple") if @team_id.nil? || @team_id.empty?
+        raise Clavis::MissingConfiguration.new("key_id for Apple") if @key_id.nil? || @key_id.empty?
+        raise Clavis::MissingConfiguration.new("private_key for Apple") if @private_key.nil? || @private_key.empty?
+      end
 
       def process_id_token_claims(claims)
         # Apple includes user info in the ID token
@@ -60,12 +96,6 @@ module Clavis
           email_verified: claims["email_verified"],
           name: claims["name"] || claims["email"]&.split("@")&.first
         }
-      end
-
-      def get_user_info(_access_token)
-        # Apple doesn't have a userinfo endpoint
-        # Return an empty hash, as user info is extracted from the ID token
-        {}
       end
 
       private

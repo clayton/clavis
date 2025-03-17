@@ -1,60 +1,58 @@
 # frozen_string_literal: true
 
 module Clavis
-  # Base error class
-  class Error < StandardError
-    def initialize(message = nil)
-      @message = message
-      super(format_message)
-    end
-
-    private
-
-    def format_message
-      return @message if @message
-
-      class_name = self.class.name.split("::").last
-      words = class_name.gsub(/([A-Z])/, ' \1').strip.split(" ")
-      words.join(" ").downcase
-    end
-  end
+  # Base error class for all Clavis errors
+  class Error < StandardError; end
 
   # Configuration errors
   class ConfigurationError < Error; end
 
-  class ProviderNotConfigured < ConfigurationError
-    def initialize(provider)
-      @provider = provider
-      super("Provider '#{provider}' is not configured")
-    end
-  end
-
   class MissingConfiguration < ConfigurationError
-    def initialize(option)
-      @option = option
-      super("Missing required configuration option: #{option}")
+    def initialize(missing_config)
+      super("Missing configuration: #{missing_config}")
     end
   end
 
-  # Authentication errors
-  class AuthenticationError < Error; end
+  class InvalidConfiguration < ConfigurationError
+    def initialize(config_name, message)
+      super("Invalid configuration for #{config_name}: #{message}")
+    end
+  end
 
-  class InvalidState < AuthenticationError
+  # Provider errors
+  class ProviderError < Error; end
+
+  class UnsupportedProvider < ProviderError
+    def initialize(provider)
+      super("Unsupported provider: #{provider}")
+    end
+  end
+
+  class ProviderAPIError < ProviderError
+    def initialize(provider, message)
+      super("API error from #{provider}: #{message}")
+    end
+  end
+
+  # Authorization errors
+  class AuthorizationError < Error; end
+
+  class AuthorizationDenied < AuthorizationError
+    def initialize(provider = nil)
+      message = provider ? "User denied authorization for #{provider}" : "User denied authorization"
+      super(message)
+    end
+  end
+
+  class InvalidState < AuthorizationError
     def initialize
-      super("Invalid state parameter. This may be a CSRF attempt or the session expired")
+      super("Invalid state parameter in callback")
     end
   end
 
-  class MissingState < AuthenticationError
+  class MissingState < AuthorizationError
     def initialize
-      super("Missing state parameter in session. Session may have expired")
-    end
-  end
-
-  class AuthorizationDenied < AuthenticationError
-    def initialize(reason = nil)
-      @reason = reason
-      super(reason ? "Authorization denied: #{reason}" : "Authorization denied by user")
+      super("Missing state parameter in callback")
     end
   end
 
@@ -62,9 +60,20 @@ module Clavis
   class TokenError < Error; end
 
   class InvalidToken < TokenError
-    def initialize(reason = nil)
-      @reason = reason
-      super(reason ? "Invalid token: #{reason}" : "Token validation failed")
+    def initialize(message = "Invalid token")
+      super(message)
+    end
+  end
+
+  class InvalidAccessToken < TokenError
+    def initialize
+      super("Invalid access token")
+    end
+  end
+
+  class InvalidGrant < TokenError
+    def initialize(message = "Invalid grant")
+      super(message)
     end
   end
 
@@ -74,36 +83,34 @@ module Clavis
     end
   end
 
-  class InvalidGrant < TokenError
-    def initialize(reason = nil)
-      @reason = reason
-      super(reason ? "Invalid grant: #{reason}" : "Authorization code is invalid or expired")
+  # Operation errors
+  class UnsupportedOperation < Error
+    def initialize(message)
+      super("Unsupported operation: #{message}")
     end
   end
 
-  class InvalidAccessToken < TokenError
-    def initialize
-      super("Access token is invalid or expired")
-    end
-  end
+  # User errors
+  class UserError < Error; end
 
-  # Provider errors
-  class ProviderError < Error; end
-
-  class UnsupportedProvider < ProviderError
-    def initialize(provider)
-      @provider = provider
-      super("Provider '#{provider}' is not supported")
-    end
-  end
-
-  class ProviderAPIError < ProviderError
-    def initialize(provider, error = nil)
-      @provider = provider
-      @error = error
-      message = "Error from #{provider} API"
-      message += ": #{error}" if error
+  class UserCreationFailed < UserError
+    def initialize(message = "Failed to create user")
       super(message)
+    end
+  end
+
+  class UserNotFound < UserError
+    def initialize
+      super("User not found")
+    end
+  end
+
+  # View errors
+  class ViewError < Error; end
+
+  class InvalidButton < ViewError
+    def initialize(provider)
+      super("Invalid button provider: #{provider}")
     end
   end
 end

@@ -2,28 +2,101 @@
 
 module Clavis
   module ViewHelpers
+    # Generates an OAuth button for the specified provider
+    #
+    # @param provider [Symbol] The provider to generate a button for
+    # @param options [Hash] Options for the button
+    # @option options [String] :text Custom text for the button
+    # @option options [String] :class Custom CSS class for the button
+    # @option options [String] :icon Custom icon for the button
+    # @option options [String] :icon_class Custom CSS class for the icon
+    # @option options [String] :method HTTP method for the button (default: :get)
+    # @option options [Hash] :html HTML attributes for the button
+    # @return [String] HTML for the button
     def oauth_button(provider, options = {})
-      # Validate provider configuration
-      begin
-        Clavis.configuration.validate_provider!(provider)
-      rescue Clavis::ProviderNotConfigured
-        # Return error message or comment in development/test
-        if defined?(Rails) && (Rails.env.development? || Rails.env.test?)
-          return content_tag(:div, "#{provider} not configured. Add client_id and client_secret.",
-                             class: "clavis-error")
-        else
-          Clavis::Logging.logger.error("Attempted to use unconfigured provider: #{provider}")
-          return nil
-        end
-      end
+      provider = provider.to_sym
 
-      # Render button with proper styling and SVG
-      button_text = options.delete(:text) || "Sign in with #{provider.to_s.capitalize}"
-      button_class = "clavis-button clavis-#{provider}-button #{options.delete(:class)}"
+      # Default options
+      options = {
+        text: default_button_text(provider),
+        class: default_button_class(provider),
+        icon: default_button_icon(provider),
+        icon_class: default_icon_class(provider),
+        method: :get,
+        html: {}
+      }.merge(options)
 
-      link_to auth_authorize_path(provider), class: button_class, method: :post, data: options[:data] do
-        provider_svg(provider) + content_tag(:span, button_text)
+      # Generate the button
+      link_to(
+        oauth_button_content(provider, options),
+        auth_path(provider),
+        method: options[:method],
+        class: options[:class],
+        **options[:html]
+      )
+    end
+
+    private
+
+    def oauth_button_content(_provider, options)
+      content = ""
+
+      # Add icon if available
+      content += content_tag(:span, "", class: options[:icon_class]) if options[:icon].present?
+
+      # Add text
+      content += content_tag(:span, options[:text])
+
+      content.html_safe
+    end
+
+    def auth_path(provider)
+      Rails.application.routes.url_helpers.send("auth_#{provider}_path")
+    rescue NoMethodError
+      # Fallback for custom providers
+      Rails.application.routes.url_helpers.send("auth_path", provider: provider)
+    end
+
+    def default_button_text(provider)
+      case provider
+      when :google
+        "Sign in with Google"
+      when :github
+        "Sign in with GitHub"
+      when :facebook
+        "Sign in with Facebook"
+      when :apple
+        "Sign in with Apple"
+      when :microsoft
+        "Sign in with Microsoft"
+      else
+        "Sign in with #{provider.to_s.titleize}"
       end
+    end
+
+    def default_button_class(provider)
+      "oauth-button oauth-button--#{provider}"
+    end
+
+    def default_button_icon(provider)
+      case provider
+      when :google
+        "google"
+      when :github
+        "github"
+      when :facebook
+        "facebook"
+      when :apple
+        "apple"
+      when :microsoft
+        "microsoft"
+      else
+        "oauth"
+      end
+    end
+
+    def default_icon_class(provider)
+      "oauth-button__icon oauth-button__icon--#{provider}"
     end
 
     def provider_svg(provider)

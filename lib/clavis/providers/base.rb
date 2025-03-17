@@ -65,6 +65,25 @@ module Clavis
         parse_token_response(response)
       end
 
+      def refresh_token(refresh_token)
+        params = {
+          grant_type: "refresh_token",
+          refresh_token: refresh_token,
+          client_id: client_id,
+          client_secret: client_secret
+        }
+
+        response = http_client.post(token_endpoint, params)
+
+        if response.status != 200
+          Clavis::Logging.log_token_refresh(provider_name, false)
+          handle_token_error_response(response)
+        end
+
+        Clavis::Logging.log_token_refresh(provider_name, true)
+        parse_token_response(response)
+      end
+
       def process_callback(code, expected_state)
         tokens = token_exchange(code: code, expected_state: expected_state)
 

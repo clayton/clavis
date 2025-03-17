@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "spec_helper"
+
 RSpec.describe Clavis::Providers::Apple do
   let(:config) do
     {
@@ -66,6 +68,22 @@ RSpec.describe Clavis::Providers::Apple do
       expect(url).to include("redirect_uri=https%3A%2F%2Fexample.com%2Fauth%2Fapple%2Fcallback")
       expect(url).to include("scope=name+email")
       expect(url).to include("state=test-state")
+    end
+  end
+
+  describe "#refresh_token" do
+    it "raises an UnsupportedOperation error" do
+      expect do
+        provider.refresh_token("some_refresh_token")
+      end.to raise_error(Clavis::UnsupportedOperation, "Unsupported operation: Apple does not support refresh tokens")
+    end
+  end
+
+  describe "#get_user_info" do
+    it "raises an UnsupportedOperation error" do
+      expect do
+        provider.get_user_info("some_access_token")
+      end.to raise_error(Clavis::UnsupportedOperation, "Unsupported operation: Apple does not have a userinfo endpoint")
     end
   end
 end

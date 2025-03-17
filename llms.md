@@ -1,6 +1,22 @@
-# Clavis - LLM Documentation
+# Clavis: Large Language Model Documentation
 
-This document provides detailed information about the Clavis gem architecture, implementation details, and usage patterns. It is designed to be consumed by Large Language Models to assist developers with implementation and customization.
+This document provides detailed information about the Clavis gem for large language models to understand its architecture, functionality, and implementation details.
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Core Components](#core-components)
+4. [Authentication Flow](#authentication-flow)
+5. [Provider Implementation](#provider-implementation)
+6. [Token Refresh](#token-refresh)
+7. [Custom Providers](#custom-providers)
+   - [Generic Provider](#generic-provider)
+   - [Custom Provider Class](#custom-provider-class)
+   - [Registering Custom Providers](#registering-custom-providers)
+8. [Error Handling](#error-handling)
+9. [Security Considerations](#security-considerations)
+10. [Integration Points](#integration-points)
 
 ## Overview
 
@@ -678,4 +694,193 @@ end
     expires: true
   }
 }
-``` 
+```
+
+## Custom Providers
+
+Clavis supports custom OAuth providers through two approaches:
+
+1. Using the built-in Generic provider with configuration
+2. Creating a custom provider class by extending the Base provider
+
+### Generic Provider
+
+The Generic provider allows you to configure any OAuth 2.0 provider by specifying the necessary endpoints:
+
+```ruby
+# In configuration
+config.providers = {
+  custom_provider: {
+    client_id: ENV['CUSTOM_PROVIDER_CLIENT_ID'],
+    client_secret: ENV['CUSTOM_PROVIDER_CLIENT_SECRET'],
+    redirect_uri: 'https://your-app.com/auth/custom_provider/callback',
+    authorization_endpoint: 'https://auth.custom-provider.com/oauth/authorize',
+    token_endpoint: 'https://auth.custom-provider.com/oauth/token',
+    userinfo_endpoint: 'https://api.custom-provider.com/userinfo',
+    scopes: 'profile email',
+    openid_provider: false
+  }
+}
+```
+
+The Generic provider implementation:
+
+```ruby
+module Clavis
+  module Providers
+    class Generic < Base
+      attr_reader :auth_endpoint, :token_endpoint_url, :userinfo_endpoint_url, :scopes
+
+      def initialize(config = {})
+        @auth_endpoint = config[:authorization_endpoint]
+        @token_endpoint_url = config[:token_endpoint]
+        @userinfo_endpoint_url = config[:userinfo_endpoint]
+        @scopes = config[:scopes]
+        @is_openid = config[:openid_provider] || false
+
+        validate_endpoints!
+        super(config)
+      end
+
+      def authorization_endpoint
+        @auth_endpoint
+      end
+
+      def token_endpoint
+        @token_endpoint_url
+      end
+
+      def userinfo_endpoint
+        @userinfo_endpoint_url
+      end
+
+      def default_scopes
+        @scopes || ""
+      end
+
+      def openid_provider?
+        @is_openid
+      end
+
+      protected
+
+      def validate_endpoints!
+        raise Clavis::MissingConfiguration.new("authorization_endpoint") if @auth_endpoint.nil? || @auth_endpoint.empty?
+        raise Clavis::MissingConfiguration.new("token_endpoint") if @token_endpoint_url.nil? || @token_endpoint_url.empty?
+        raise Clavis::MissingConfiguration.new("userinfo_endpoint") if @userinfo_endpoint_url.nil? || @userinfo_endpoint_url.empty?
+      end
+    end
+  end
+end
+```
+
+### Custom Provider Class
+
+For more control, you can create your own provider class by extending `Clavis::Providers::Base`:
+
+```ruby
+module MyApp
+  module Providers
+    class ExampleOAuth < Clavis::Providers::Base
+      # Override the provider_name method if you want a different name than the class name
+      def provider_name
+        :example_oauth
+      end
+
+      # Required: Implement the authorization endpoint
+      def authorization_endpoint
+        "https://auth.example.com/oauth2/authorize"
+      end
+
+      # Required: Implement the token endpoint
+      def token_endpoint
+        "https://auth.example.com/oauth2/token"
+      end
+
+      # Required: Implement the userinfo endpoint
+      def userinfo_endpoint
+        "https://api.example.com/userinfo"
+      end
+
+      # Optional: Override the default scopes
+      def default_scopes
+        "profile email"
+      end
+
+      # Optional: Specify if this is an OpenID Connect provider
+      def openid_provider?
+        false
+      end
+
+      # Optional: Override the process_userinfo_response method to customize user info parsing
+      protected
+
+      def process_userinfo_response(response)
+        data = JSON.parse(response.body, symbolize_names: true)
+        
+        # Map the provider's user info fields to a standardized format
+        {
+          id: data[:user_id],
+          name: data[:display_name],
+          email: data[:email_address],
+          picture: data[:avatar_url]
+        }
+      end
+    end
+  end
+end
+```
+
+### Registering Custom Providers
+
+Register your custom provider with Clavis:
+
+```ruby
+# In an initializer
+Clavis.register_provider(:example_oauth, MyApp::Providers::ExampleOAuth)
+```
+
+The provider registry is managed by the `Clavis` module:
+
+```ruby
+def register_provider(name, provider_class)
+  provider_registry[name.to_sym] = provider_class
+end
+
+def provider_registry
+  @provider_registry ||= {}
+end
+```
+
+## Error Handling
+
+Clavis provides a set of standardized error classes for handling different types of errors:
+
+1. **ConfigurationError**: Errors related to configuration
+2. **ProviderError**: Errors related to provider operations
+3. **AuthorizationError**: Errors during the authorization process
+4. **TokenError**: Errors related to token operations
+5. **UserError**: Errors related to user operations
+
+Each error class inherits from the base `Clavis::Error` class and provides specific error messages.
+
+## Security Considerations
+
+Clavis implements several security measures:
+
+1. **State Parameter**: Prevents CSRF attacks by validating the state parameter
+2. **Nonce Parameter**: Prevents replay attacks for OpenID Connect providers
+3. **HTTPS**: Requires HTTPS for all OAuth operations
+4. **Token Storage**: Securely stores tokens in the database
+5. **Error Logging**: Logs security-related errors for monitoring
+
+## Integration Points
+
+Clavis integrates with Rails applications at several points:
+
+1. **Routes**: Defines routes for OAuth authorization and callbacks
+2. **Controllers**: Provides controller concerns for handling OAuth flows
+3. **Models**: Provides model concerns for user creation and association
+4. **Views**: Provides view helpers for generating OAuth buttons
+5. **Database**: Stores OAuth identities and tokens
+6. **Configuration**: Configures providers and options 

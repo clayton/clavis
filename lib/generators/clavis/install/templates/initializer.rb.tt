@@ -1,0 +1,33 @@
+# frozen_string_literal: true
+
+Clavis.configure do |config|
+  # Configure your OAuth providers here
+  config.providers = {
+    # Google example:
+    # google: {
+    #   client_id: ENV['GOOGLE_CLIENT_ID'],
+    #   client_secret: ENV['GOOGLE_CLIENT_SECRET'],
+    #   redirect_uri: 'https://your-app.com/auth/google/callback'
+    # },
+    
+    # GitHub example:
+    # github: {
+    #   client_id: ENV['GITHUB_CLIENT_ID'],
+    #   client_secret: ENV['GITHUB_CLIENT_SECRET'],
+    #   redirect_uri: 'https://your-app.com/auth/github/callback'
+    # },
+    
+    # Apple example:
+    # apple: {
+    #   client_id: ENV['APPLE_CLIENT_ID'], # Your Services ID
+    #   team_id: ENV['APPLE_TEAM_ID'],
+    #   key_id: ENV['APPLE_KEY_ID'],
+    #   private_key: ENV['APPLE_PRIVATE_KEY'],
+    #   redirect_uri: 'https://your-app.com/auth/apple/callback'
+    # }
+  }
+  
+  # Optional: Configure logging
+  # config.logger = Rails.logger
+  # config.log_level = :info
+end 

@@ -12,7 +12,7 @@ module Clavis
       end
 
       def userinfo_endpoint
-        "https://openidconnect.googleapis.com/v1/userinfo"
+        "https://www.googleapis.com/oauth2/v3/userinfo"
       end
 
       def default_scopes
@@ -21,6 +21,23 @@ module Clavis
 
       def openid_provider?
         true
+      end
+
+      def authorize_url(state:, nonce:, scope: nil)
+        params = {
+          response_type: "code",
+          client_id: client_id,
+          redirect_uri: redirect_uri,
+          scope: scope || default_scopes,
+          state: state,
+          nonce: nonce,
+          access_type: "offline",
+          prompt: "consent" # Force consent screen to ensure refresh token
+        }
+
+        Clavis::Logging.log_authorization_request(provider_name, params)
+
+        "#{authorization_endpoint}?#{to_query(params)}"
       end
 
       protected

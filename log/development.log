@@ -2,3 +2,19 @@
 [Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/google/callback", scope: "openid email profile", state: "test-state", nonce: "test-nonce"}
 [Clavis] Authorization request initiated for provider: google
 [Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/google/callback", scope: "email", state: "test-state"}
+[Clavis] Authorization request initiated for provider: github
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/github/callback", scope: "user:email", state: "test-state"}
+[Clavis] Authorization request initiated for provider: apple
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/apple/callback", scope: "name email", state: "test-state"}
+[Clavis] Authorization request initiated for provider: facebook
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/facebook/callback", scope: "email public_profile", state: "test-state"}
+[Clavis] Authorization request initiated for provider: microsoft
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/microsoft/callback", scope: "openid email profile User.Read", state: "test-state", nonce: "test-nonce"}
+[Clavis] Authorization request initiated for provider: github
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/github/callback", scope: "user:email", state: "test-state"}
+[Clavis] Authorization request initiated for provider: apple
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/apple/callback", scope: "name email", state: "test-state"}
+[Clavis] Authorization request initiated for provider: facebook
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/facebook/callback", scope: "email public_profile", state: "test-state"}
+[Clavis] Authorization request initiated for provider: microsoft
+[Clavis] Authorization parameters: {response_type: "code", client_id: "test-client-id", redirect_uri: "https://example.com/auth/microsoft/callback", scope: "openid email profile User.Read", state: "test-state", nonce: "test-nonce"}

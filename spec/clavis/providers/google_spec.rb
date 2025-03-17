@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "spec_helper"
+
 RSpec.describe Clavis::Providers::Google do
   let(:config) do
     {
@@ -73,23 +75,64 @@ RSpec.describe Clavis::Providers::Google do
   end
 
   describe "#authorize_url" do
-    it "returns a properly formatted authorization URL" do
+    it "includes the required parameters" do
       url = provider.authorize_url(state: "test-state", nonce: "test-nonce")
 
-      expect(url).to start_with("https://accounts.google.com/o/oauth2/v2/auth?")
+      expect(url).to start_with("https://accounts.google.com/o/oauth2/v2/auth")
       expect(url).to include("response_type=code")
       expect(url).to include("client_id=test-client-id")
       expect(url).to include("redirect_uri=https%3A%2F%2Fexample.com%2Fauth%2Fgoogle%2Fcallback")
-      expect(url).to include("scope=openid+email+profile")
       expect(url).to include("state=test-state")
       expect(url).to include("nonce=test-nonce")
+      expect(url).to include("scope=openid+email+profile")
     end
 
-    it "uses custom scopes if provided" do
-      url = provider.authorize_url(state: "test-state", nonce: "test-nonce", scope: "email")
+    it "includes access_type=offline and prompt=consent for refresh token support" do
+      url = provider.authorize_url(state: "test-state", nonce: "test-nonce")
 
-      expect(url).to include("scope=email")
-      expect(url).not_to include("scope=openid+email+profile")
+      expect(url).to include("access_type=offline")
+      expect(url).to include("prompt=consent")
+    end
+
+    it "allows custom scopes" do
+      url = provider.authorize_url(state: "test-state", nonce: "test-nonce", scope: "openid email")
+
+      expect(url).to include("scope=openid+email")
+    end
+  end
+
+  describe "#token_exchange" do
+    let(:http_client) { instance_double(Faraday::Connection) }
+    let(:response) do
+      instance_double(
+        Faraday::Response,
+        status: 200,
+        body: {
+          access_token: "test-access-token",
+          token_type: "Bearer",
+          expires_in: 3600,
+          refresh_token: "test-refresh-token",
+          id_token: "header.payload.signature"
+        }.to_json
+      )
+    end
+
+    before do
+      allow(provider).to receive(:http_client).and_return(http_client)
+      allow(http_client).to receive(:post).and_return(response)
+      allow(Clavis::Logging).to receive(:log_token_exchange)
+    end
+
+    it "exchanges the code for tokens" do
+      result = provider.token_exchange(code: "test-code")
+
+      expect(result).to include(
+        access_token: "test-access-token",
+        token_type: "Bearer",
+        expires_in: 3600,
+        refresh_token: "test-refresh-token",
+        id_token: "header.payload.signature"
+      )
     end
   end
 end
