@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2023-03-18
+
+### Fixed
+- Updated release workflow to use Ruby 3.3
+- Fixed RuboCop target Ruby version to match required version
+
 ## [0.5.0] - 2023-03-18
 
 ### Changed
