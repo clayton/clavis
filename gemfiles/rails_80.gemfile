@@ -1,16 +1,18 @@
+# frozen_string_literal: true
+
 source "https://rubygems.org"
 
 gemspec path: ".."
 
-gem "rails", "~> 8.0.0"
-gem "sqlite3", "~> 1.6" 
-gem "puma"
+gem "bigdecimal"
 gem "debug"
 gem "mutex_m"
-gem "bigdecimal"
+gem "puma"
+gem "rails", "~> 8.0.0"
+gem "sqlite3", "~> 1.6"
 
 group :development, :test do
-  gem "rspec-rails"
   gem "generator_spec"
   gem "ostruct"
-end 
+  gem "rspec-rails"
+end

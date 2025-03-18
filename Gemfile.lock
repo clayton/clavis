@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    clavis (0.3.3)
+    clavis (0.3.4)
       bigdecimal
       faraday (~> 2.7)
       jwt (~> 2.7)
