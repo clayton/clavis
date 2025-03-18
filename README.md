@@ -10,13 +10,23 @@ You should be able to install and go in 5 minutes.
 
 ## Quick Start Guide
 
-Get up and running with OAuth authentication in just three steps:
+Get up and running with OAuth authentication in just four steps:
 
 ```ruby
 # 1. Add to your Gemfile and run bundle install
 gem 'clavis'
+```
 
-# 2. Configure a provider (in config/initializers/clavis.rb)
+```bash
+# 2. Run the installation generator
+# This creates the necessary migrations, initializer, and mounts the engine in routes.rb
+rails generate clavis:install
+rails db:migrate
+```
+
+```ruby
+# 3. Configure a provider (in config/initializers/clavis.rb)
+# The generator created this file for you - just update with your credentials
 Clavis.configure do |config|
   config.providers = {
     github: {
@@ -25,13 +35,9 @@ Clavis.configure do |config|
     }
   }
 end
-
-# 3. Mount the engine in your routes.rb
-# This automatically creates all necessary routes!
-mount Clavis::Engine => "/"
 ```
 
-Then in your User model:
+Then in your User model (which the generator should have created or modified for you):
 ```ruby
 # app/models/user.rb
 include Clavis::Models::OauthAuthenticatable
@@ -227,14 +233,15 @@ If you already have an authentication system in your application, follow these s
    end
    ```
 
-5. **Mount Clavis engine in your routes**:
+5. **[Optional] Verify the engine is mounted**:
+   The installation generator should have already mounted the Clavis engine in your routes.rb file. If not, you can add it manually:
    ```ruby
    # config/routes.rb
    Rails.application.routes.draw do
      # Your existing routes...
      
-     # Mount Clavis engine - this automatically sets up all necessary OAuth routes
-     mount Clavis::Engine => "/"
+     # Mount Clavis engine (if not already added by the generator)
+     mount Clavis::Engine => "/auth"
    end
    ```
 
@@ -396,21 +403,25 @@ These buttons look professional by default and are designed to be immediately re
 
 ## Routes Configuration
 
-Clavis now automatically sets up the routes needed for OAuth authentication when you mount the engine:
+Clavis's installation generator automatically mounts the engine in your routes.rb file:
 
 ```ruby
-# config/routes.rb
-Rails.application.routes.draw do
-  # Mount Clavis engine - this automatically sets up all necessary OAuth routes
-  mount Clavis::Engine => "/"
-  
-  # Other routes...
-end
+# The generator adds this line to your config/routes.rb
+mount Clavis::Engine => "/auth"  # Default path
 ```
 
-This will create the following routes:
+This creates the following routes available in your application:
 - `auth_path(:provider)` - For initiating OAuth authentication with a provider
 - `auth_callback_path(:provider)` - For handling OAuth callbacks
+
+### Customizing the Mount Path
+
+If you want to customize the mount path:
+
+```ruby
+# config/routes.rb - Edit the auto-generated line
+mount Clavis::Engine => "/oauth"  # Custom mount path
+```
 
 ### Custom Routes (Optional)
 
