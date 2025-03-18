@@ -2,6 +2,51 @@
 
 This document provides detailed information about the Clavis gem for large language models to understand its architecture, functionality, and implementation details.
 
+## Quick Start Guide for Implementation
+
+Here's how to implement Clavis in a Rails application with minimal steps:
+
+```ruby
+# Step 1: Add to Gemfile
+gem 'clavis'
+
+# Step 2: Run migrations
+# $ rails clavis:install:migrations
+# $ rails db:migrate
+
+# Step 3: Configure a provider (in config/initializers/clavis.rb)
+Clavis.configure do |config|
+  config.providers = {
+    github: {
+      client_id: ENV["GITHUB_CLIENT_ID"],
+      client_secret: ENV["GITHUB_CLIENT_SECRET"]
+    }
+  }
+end
+
+# Step 4: Mount the engine in routes.rb
+# This automatically sets up all required routes including
+# auth_path and auth_callback_path helpers
+mount Clavis::Engine => "/"
+
+# Step 5: Include in User model
+# app/models/user.rb
+class User < ApplicationRecord
+  include Clavis::Models::OauthAuthenticatable
+  
+  # Helper method for conditional password validation
+  def password_required?
+    !oauth_user?
+  end
+end
+```
+
+The key components are:
+1. Engine mounting (provides routes automatically)
+2. Provider configuration
+3. Model integration
+4. Optional controller customization (not required for basic functionality)
+
 ## Table of Contents
 
 1. [Overview](#overview)

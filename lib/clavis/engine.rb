@@ -15,10 +15,27 @@ module Clavis
     mattr_accessor :include_view_helpers
     self.include_view_helpers = true # Default to true
 
+    # Class-level accessor for the route setup function
+    mattr_accessor :setup_routes
+
+    # Configuration flag to control automatic route installation
+    mattr_accessor :auto_install_routes
+    self.auto_install_routes = true # Default to true
+
     initializer "clavis.assets" do |app|
       # Add Clavis assets to the asset pipeline
       app.config.assets.paths << root.join("app", "assets", "stylesheets") if app.config.respond_to?(:assets)
       app.config.assets.paths << root.join("app", "assets", "javascripts") if app.config.respond_to?(:assets)
+    end
+
+    # Add an initializer to set up application routes when the engine is mounted
+    initializer "clavis.routes", after: :add_routing_paths do |app|
+      # Only install routes automatically if enabled
+      if auto_install_routes && setup_routes.respond_to?(:call)
+        # Call the setup_routes lambda to add routes to the parent application
+        setup_routes.call(app)
+        Clavis::Logging.log_info("Installed Clavis routes: auth_path and auth_callback_path helpers are now available")
+      end
     end
 
     initializer "clavis.helpers" do

@@ -8,6 +8,42 @@ You should be able to install and go in 5 minutes.
 
 > 🔑 **Fun fact**: The name "Clavis" comes from the Latin word for "key" - a fitting name for a gem that unlocks secure authentication!
 
+## Quick Start Guide
+
+Get up and running with OAuth authentication in just three steps:
+
+```ruby
+# 1. Add to your Gemfile and run bundle install
+gem 'clavis'
+
+# 2. Configure a provider (in config/initializers/clavis.rb)
+Clavis.configure do |config|
+  config.providers = {
+    github: {
+      client_id: ENV["GITHUB_CLIENT_ID"],
+      client_secret: ENV["GITHUB_CLIENT_SECRET"]
+    }
+  }
+end
+
+# 3. Mount the engine in your routes.rb
+# This automatically creates all necessary routes!
+mount Clavis::Engine => "/"
+```
+
+Then in your User model:
+```ruby
+# app/models/user.rb
+include Clavis::Models::OauthAuthenticatable
+```
+
+And add this button to your login page:
+```erb
+<%= link_to "Sign in with GitHub", auth_path(:github), class: "btn" %>
+```
+
+That's it! You now have "Sign in with GitHub" functionality in your Rails app.
+
 If you are an AI Agent or LLM, read this: [llms.md](llms.md)
 
 If you are a human, who likes reading documentation, and you recently touched grass, and you have been experiencing insomnia, and you have already read the classics, and you're bored, and you're still here, then keep reading.
@@ -161,7 +197,9 @@ If you already have an authentication system in your application, follow these s
    end
    ```
 
-4. **Create or modify your authentication controller**:
+4. **Create or modify your authentication controller (optional)**:
+   > **Note:** This step is optional! Clavis provides a built-in controller that handles OAuth flows automatically. Only create your own controller if you need custom authentication logic.
+   
    ```ruby
    # app/controllers/sessions_controller.rb
    class SessionsController < ApplicationController
@@ -169,32 +207,34 @@ If you already have an authentication system in your application, follow these s
      
      # Your existing login/logout actions...
      
-     # Add OAuth callback handler
+     # Example of a custom callback handler
      def oauth_callback
        auth_hash = process_callback(params[:provider])
        
        # Find or create a user with the OAuth data
        @user = User.find_for_oauth(auth_hash)
        
+       # Custom logic here - for example:
+       track_user_login_analytics(@user)
+       
        # Sign in the user (using your existing authentication system)
        session[:user_id] = @user.id
        
-       redirect_to root_path, notice: "Signed in successfully!"
+       redirect_to dashboard_path, notice: "Welcome back, #{@user.name}!"
      rescue Clavis::AuthenticationError => e
        redirect_to login_path, alert: "Authentication failed: #{e.message}"
      end
    end
    ```
 
-5. **Add routes for OAuth authentication**:
+5. **Mount Clavis engine in your routes**:
    ```ruby
    # config/routes.rb
    Rails.application.routes.draw do
      # Your existing routes...
      
-     # OAuth routes
-     get '/auth/:provider', to: 'sessions#oauth_authorize', as: :auth
-     get '/auth/:provider/callback', to: 'sessions#oauth_callback'
+     # Mount Clavis engine - this automatically sets up all necessary OAuth routes
+     mount Clavis::Engine => "/"
    end
    ```
 
@@ -206,11 +246,12 @@ If you already have an authentication system in your application, follow these s
    <%# Your existing login form... %>
    
    <div class="oauth-buttons">
-     <p>Or sign in with:</p>
-     <%= oauth_button :google %>
-     <%= oauth_button :github %>
+     <%= link_to "Sign in with GitHub", auth_path(:github), class: "oauth-button github" %>
+     <%= link_to "Sign in with Google", auth_path(:google), class: "oauth-button google" %>
    </div>
    ```
+
+> **Note:** The `auth_path` helper is automatically available when you mount the Clavis engine. No additional controller or route setup is needed!
 
 ## Controller Integration
 
@@ -355,16 +396,38 @@ These buttons look professional by default and are designed to be immediately re
 
 ## Routes Configuration
 
-Add the necessary routes to your application:
+Clavis now automatically sets up the routes needed for OAuth authentication when you mount the engine:
 
 ```ruby
 # config/routes.rb
 Rails.application.routes.draw do
-  # OAuth routes
-  get '/auth/:provider', to: 'auth#oauth_authorize', as: :auth
-  get '/auth/:provider/callback', to: 'auth#oauth_callback'
+  # Mount Clavis engine - this automatically sets up all necessary OAuth routes
+  mount Clavis::Engine => "/"
   
   # Other routes...
+end
+```
+
+This will create the following routes:
+- `auth_path(:provider)` - For initiating OAuth authentication with a provider
+- `auth_callback_path(:provider)` - For handling OAuth callbacks
+
+### Custom Routes (Optional)
+
+If you prefer to set up your own custom routes instead of using the auto-generated ones, you can disable the automatic route installation:
+
+```ruby
+# config/initializers/clavis.rb
+Clavis::Engine.auto_install_routes = false
+
+# config/routes.rb
+Rails.application.routes.draw do
+  # Mount Clavis engine without auto-routes
+  mount Clavis::Engine => "/"
+  
+  # Your custom OAuth routes
+  get '/custom/auth/:provider', to: 'your_controller#your_authorize_method', as: :auth
+  get '/custom/auth/:provider/callback', to: 'your_controller#your_callback_method', as: :auth_callback
 end
 ```
 

@@ -2,10 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.6.0] - 2024-05-10
 
 ### Added
 - Added `oauth_user?` method to `OauthAuthenticatable` concern to easily check if a user has any OAuth identities
+- Added automatic route setup to simplify integration (no need to manually define routes anymore)
+
+### Changed
+- Enhanced the built-in AuthController to handle OAuth flows without requiring a custom controller
+- Improved documentation on route setup and OAuth integration
+- Added Quick Start guides to README and LLMs documentation
 
 ## [0.5.2] - 2023-03-18
 

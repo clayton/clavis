@@ -4,6 +4,8 @@ module Clavis
   class AuthController < ::ApplicationController
     include Clavis::Controllers::Concerns::Authentication
 
+    before_action :check_provider_configured
+
     def authorize
       oauth_authorize
     end
@@ -41,6 +43,20 @@ module Clavis
     end
 
     private
+
+    def check_provider_configured
+      provider = params[:provider]
+
+      # Skip for testing or when provider is nil
+      return if request.path.start_with?("/test") || provider.nil?
+
+      return if Clavis.configuration.provider_configured?(provider)
+
+      Clavis::Logging.log_error("Provider '#{provider}' is not configured")
+      flash[:alert] =
+        "Authentication provider '#{provider}' is not configured. Please check your Clavis configuration."
+      redirect_to main_app.root_path
+    end
 
     def find_or_create_user_from_oauth(auth_hash)
       if defined?(User) && User.respond_to?(:find_for_oauth)
