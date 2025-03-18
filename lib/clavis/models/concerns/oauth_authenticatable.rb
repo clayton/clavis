@@ -178,6 +178,15 @@ module Clavis
             oauth_identities.max_by { |identity| identity.updated_at || Time.at(0) }
           end
         end
+
+        # Returns true if the user has any OAuth identities
+        def oauth_user?
+          if oauth_identities.respond_to?(:exists?)
+            oauth_identities.exists?
+          else
+            oauth_identities.any?
+          end
+        end
       end
     end
   end

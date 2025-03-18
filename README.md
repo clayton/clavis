@@ -805,6 +805,9 @@ current_user.oauth_avatar_url
 current_user.oauth_email("google")
 current_user.oauth_name("github")
 current_user.oauth_avatar_url("facebook")
+
+# Check if the user has authenticated via OAuth
+current_user.oauth_user?
 ```
 
 These methods work out of the box with any OAuth provider supported by Clavis, making it easy to display user information in your views without writing custom provider-specific code.

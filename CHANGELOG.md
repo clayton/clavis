@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Added `oauth_user?` method to `OauthAuthenticatable` concern to easily check if a user has any OAuth identities
+
 ## [0.5.2] - 2023-03-18
 
 ### Changed

@@ -155,4 +155,40 @@ RSpec.describe Clavis::Models::Concerns::OauthAuthenticatable do
       expect(google_identity.auth_data[:standardized]).to include(:email)
     end
   end
+
+  describe "#oauth_user?" do
+    context "when the user has OAuth identities" do
+      before do
+        allow(user).to receive(:oauth_identities).and_return([google_identity])
+      end
+
+      it "returns true" do
+        expect(user.oauth_user?).to be true
+      end
+    end
+
+    context "when the user has no OAuth identities" do
+      before do
+        allow(user).to receive(:oauth_identities).and_return([])
+      end
+
+      it "returns false" do
+        expect(user.oauth_user?).to be false
+      end
+    end
+
+    context "with ActiveRecord-like collection" do
+      let(:ar_collection) { double("AR Collection") }
+
+      before do
+        allow(user).to receive(:oauth_identities).and_return(ar_collection)
+        allow(ar_collection).to receive(:exists?).and_return(true)
+      end
+
+      it "uses exists? when available" do
+        expect(ar_collection).to receive(:exists?)
+        user.oauth_user?
+      end
+    end
+  end
 end
