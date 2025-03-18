@@ -204,8 +204,6 @@ module Clavis
           rescue Clavis::UnsupportedOperation
             # Continue with empty user_info hash
           end
-        else
-          # Continue with empty user_info hash
         end
 
         # Try to get a UID from various sources
