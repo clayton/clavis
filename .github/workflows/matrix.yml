@@ -40,7 +40,7 @@ jobs:
           sudo apt-get install -y build-essential pkg-config libsqlite3-dev
           
       - name: Setup bundle cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-${{ hashFiles('**/clavis.gemspec') }}-${{ hashFiles('**/Gemfile.lock') }}-v1

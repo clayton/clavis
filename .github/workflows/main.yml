@@ -27,7 +27,7 @@ jobs:
           sudo apt-get install -y build-essential pkg-config libsqlite3-dev
           
       - name: Setup bundle cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-ruby-3.4.1-gems-${{ hashFiles('**/clavis.gemspec') }}-${{ hashFiles('**/Gemfile.lock') }}-v1
@@ -69,7 +69,7 @@ jobs:
           echo "Gem built successfully: $GEM_FILE"
       
       - name: Upload gem artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gem-package
           path: pkg/*.gem
