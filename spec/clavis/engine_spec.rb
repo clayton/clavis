@@ -1,9 +1,15 @@
 # frozen_string_literal: true
 
+require "spec_helper"
 require "rails_helper"
+
+# Explicitly load the engine
+require "clavis/engine"
 
 RSpec.describe Clavis::Engine, type: :engine do
   before do
+    # Make sure the engine is loaded
+
     # Set up routes for testing
     Rails.application.routes.clear!
     Rails.application.routes.draw do

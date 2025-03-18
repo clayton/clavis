@@ -40,11 +40,12 @@ module Clavis
   end
 end
 
-# Only load the engine if Rails is defined and we're not in a test environment
+# Only load the engine if Rails is defined
 begin
-  require_relative "clavis/engine" if defined?(Rails) && !defined?(RSpec)
-rescue LoadError
-  # Engine couldn't be loaded, but that's okay in test environment
+  require_relative "clavis/engine" if defined?(Rails)
+rescue LoadError => e
+  # Log a warning if we're unable to load the engine
+  warn "Warning: Unable to load Clavis::Engine - #{e.message}" if defined?(Rails)
 end
 
 module Clavis

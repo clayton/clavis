@@ -39,6 +39,10 @@ Gem::Specification.new do |spec|
   spec.add_dependency "jwt", "~> 2.7"
   spec.add_dependency "rails", ">= 7.0"
 
+  # Dependencies for Ruby 3.4+ compatibility
+  spec.add_dependency "bigdecimal"
+  spec.add_dependency "mutex_m"
+
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
 

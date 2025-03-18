@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # This file is used for specs that require a Rails environment
-ENV["RAILS_ENV"] = "test"
+ENV["RAILS_ENV"] ||= "test"
 
 # Add clavis lib to load path
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
@@ -26,6 +26,7 @@ require "capybara/rails"
 require "capybara/rspec"
 
 # Make sure the engine is loaded
+require "clavis"
 require "clavis/engine"
 
 # Load OmniAuth for authentication tests if available

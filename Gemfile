@@ -15,6 +15,10 @@ gem "rubocop", "~> 1.21"
 
 gem "ostruct", "~> 0.6.0"
 
+# Ruby 3.4+ compatibility
+gem "bigdecimal"
+gem "mutex_m"
+
 # Development dependencies moved from gemspec
 gem "capybara", "~> 3.39", group: %i[development test]
 gem "sqlite3", "~> 2.1.0", group: %i[development test]
