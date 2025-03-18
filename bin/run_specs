@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# This script runs all specs including generators
+
+require "bundler/setup"
+require "rspec/core"
+
+# Run all specs
+exit RSpec::Core::Runner.run([]) 

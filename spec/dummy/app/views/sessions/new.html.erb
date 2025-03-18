@@ -1,0 +1,34 @@
+<h1>Sign In</h1>
+
+<% if flash[:alert] %>
+  <div class="alert alert-danger"><%= flash[:alert] %></div>
+<% end %>
+
+<% if flash[:notice] %>
+  <div class="alert alert-success"><%= flash[:notice] %></div>
+<% end %>
+
+<form action="<%= session_path %>" method="post">
+  <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
+  
+  <div>
+    <label for="email">Email</label>
+    <input type="email" name="email" id="email">
+  </div>
+  
+  <div>
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password">
+  </div>
+  
+  <div>
+    <button type="submit">Sign In</button>
+  </div>
+</form>
+
+<div>
+  <h2>Or sign in with:</h2>
+  
+  <%= link_to "Sign in with Google", auth_path(:google) %>
+  <%= link_to "Sign in with Facebook", auth_path(:facebook) %>
+</div> 

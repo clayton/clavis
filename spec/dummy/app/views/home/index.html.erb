@@ -1,0 +1,27 @@
+<h1>Welcome to the Clavis Test App</h1>
+
+<% if flash[:alert] %>
+  <div class="alert alert-danger"><%= flash[:alert] %></div>
+<% end %>
+
+<% if flash[:notice] %>
+  <div class="alert alert-success"><%= flash[:notice] %></div>
+<% end %>
+
+<% if current_user %>
+  <p>Hello, <%= current_user.name %>!</p>
+  <p>You are signed in.</p>
+  
+  <%= button_to "Sign Out", session_path, method: :delete %>
+<% else %>
+  <p>You are not signed in.</p>
+  
+  <%= link_to "Sign In", new_session_path %>
+  
+  <div>
+    <h2>Or sign in with:</h2>
+    
+    <%= link_to "Sign in with Google", auth_path(:google) %>
+    <%= link_to "Sign in with Facebook", auth_path(:facebook) %>
+  </div>
+<% end %> 

@@ -36,6 +36,9 @@ module Clavis
           filtered_params
         end
 
+        # Alias for filter_parameters for backward compatibility
+        alias filter_params filter_parameters
+
         # Installs the parameter filter in Rails if available
         # This should be called during initialization
         def install_rails_filter

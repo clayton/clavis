@@ -2,11 +2,13 @@
 
 require "rails/generators/base"
 require "rails/generators/active_record"
+require "rails/generators/actions"
 
 module Clavis
   module Generators
     class InstallGenerator < Rails::Generators::Base
       include ActiveRecord::Generators::Migration
+      include Rails::Generators::Actions
 
       source_root File.expand_path("templates", __dir__)
 
@@ -22,8 +24,8 @@ module Clavis
         create_oauth_identities_table
 
         # Then, check for the users table if it exists
-        if ActiveRecord::Base.connection.table_exists?(:users)
-          migration_template "add_oauth_to_users.rb", "db/migrate/add_oauth_to_users.rb", skip: true
+        if defined?(ActiveRecord::Base) && ActiveRecord::Base.connection.table_exists?(:users)
+          migration_template("add_oauth_to_users.rb", "db/migrate/add_oauth_to_users.rb")
         else
           say "Skipping User table migration because users table doesn't exist."
           say "Run 'rails g model User' first if you want to add OAuth fields to your User model."
@@ -54,18 +56,7 @@ module Clavis
         # Check if the table already exists to avoid duplicate migrations
         return if migration_exists?("db/migrate", "create_clavis_oauth_identities")
 
-        migration_template "migration.rb", "db/migrate/create_clavis_oauth_identities.rb", skip: true
-      end
-
-      def migration_template(source, destination, config = {})
-        migration_dir = File.dirname(destination)
-        migration_name = File.basename(destination, File.extname(destination))
-
-        return if config[:skip] && migration_exists?(migration_dir, migration_name)
-
-        config[:migration_template] = true
-        config[:skip] = false
-        super
+        migration_template("migration.rb", "db/migrate/create_clavis_oauth_identities.rb")
       end
 
       def migration_exists?(dir, name)

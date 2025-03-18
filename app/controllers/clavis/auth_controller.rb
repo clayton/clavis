@@ -50,5 +50,18 @@ module Clavis
         auth_hash
       end
     end
+
+    # Method to handle authentication requests with proper routing
+    def request_authentication
+      session[:return_to_after_authenticating] = request.url
+
+      # Only redirect to paths we control or to root_path
+      # This avoids assumptions about the host application's routes
+      redirect_to main_app.root_path, alert: "Authentication required. Please sign in to continue."
+    end
+
+    def after_authentication_url
+      session.delete(:return_to_after_authenticating) || main_app.root_path
+    end
   end
 end

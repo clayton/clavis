@@ -49,32 +49,19 @@ module Clavis
         Clavis.configuration.allowed_redirect_hosts = Array(Rails.application.config.hosts)
       end
 
-      # Log security configuration
-      Rails.logger.info("Clavis security features initialized")
-      Rails.logger.info("Token encryption: #{Clavis.configuration.encrypt_tokens ? "enabled" : "disabled"}")
-      Rails.logger.info("Parameter filtering: #{
-        Clavis.configuration.parameter_filter_enabled ? "enabled" : "disabled"
-      }")
-      Rails.logger.info("HTTPS enforcement: #{Clavis.configuration.enforce_https ? "enabled" : "disabled"}")
-      Rails.logger.info("SSL verification: #{Clavis.configuration.should_verify_ssl? ? "enabled" : "disabled"}")
-      Rails.logger.info("Minimum TLS version: #{Clavis.configuration.minimum_tls_version}")
-
-      if Clavis.configuration.allowed_redirect_hosts.any?
-        Rails.logger.info("Allowed redirect hosts: #{Clavis.configuration.allowed_redirect_hosts.join(", ")}")
-      else
-        Rails.logger.warn("No allowed redirect hosts configured. All redirect URIs will be rejected.")
+      # Only log critical security warnings
+      if Clavis.configuration.allowed_redirect_hosts.empty?
+        Clavis::Logging.security_warning("No allowed redirect hosts configured. All redirect URIs will be rejected.")
       end
 
-      # Check for insecure redirect URIs
-      Clavis.configuration.providers.each do |provider_name, config|
-        if config[:redirect_uri] && !Clavis::Security::HttpsEnforcer.https?(config[:redirect_uri])
-          if Rails.env.production?
-            Rails.logger.warn("Non-HTTPS redirect URI detected for #{provider_name}: #{config[:redirect_uri]}")
-            Rails.logger.warn("This will be automatically upgraded to HTTPS in production.")
-          else
-            Rails.logger.info("Non-HTTPS redirect URI detected for #{provider_name}: #{config[:redirect_uri]}")
-            Rails.logger.info("This is allowed in development but will be upgraded to HTTPS in production.")
-          end
+      # Check for insecure redirect URIs in production
+      if Rails.env.production?
+        Clavis.configuration.providers.each do |provider_name, config|
+          next unless config[:redirect_uri] && !Clavis::Security::HttpsEnforcer.https?(config[:redirect_uri])
+
+          message = "Non-HTTPS redirect URI detected for #{provider_name}: "
+          message += config[:redirect_uri].to_s
+          Clavis::Logging.security_warning(message)
         end
       end
     end
@@ -86,78 +73,39 @@ module Clavis
           code token access_token refresh_token id_token
           client_secret private_key encryption_key
         ]
-
-        Clavis.logger.info "Clavis: Parameter filtering enabled"
       end
     end
 
-    initializer "clavis.log_security_configuration" do
-      # Log token encryption configuration
-      if Clavis.configuration.encrypt_tokens
-        Clavis.logger.info "Clavis: Token encryption enabled"
-
-        if Clavis.configuration.use_rails_credentials
-          Clavis.logger.info "Clavis: Using Rails credentials for encryption key"
-        elsif Clavis.configuration.encryption_key.present?
-          Clavis.logger.info "Clavis: Using environment variable for encryption key"
-        else
-          Clavis.logger.warn "Clavis: Token encryption enabled but no encryption key provided"
-        end
+    initializer "clavis.security_warnings" do
+      # Only log critical security warnings
+      if !Clavis.configuration.encrypt_tokens && Rails.env.production?
+        Clavis::Logging.security_warning("Token encryption disabled in production (not recommended)")
       end
 
-      # Log redirect URI validation configuration
-      if Clavis.configuration.allowed_redirect_hosts.any?
-        Clavis.logger.info "Clavis: Redirect URI validation enabled for hosts: " \
-                           "#{Clavis.configuration.allowed_redirect_hosts.join(", ")}"
-
-        if Clavis.configuration.exact_redirect_uri_matching
-          Clavis.logger.info "Clavis: Using exact matching for redirect URIs"
-        end
-
-        if Clavis.configuration.allow_localhost_in_development && Rails.env.development?
-          Clavis.logger.info "Clavis: Allowing localhost in development environment"
-        end
-      else
-        Clavis.logger.warn "Clavis: No allowed redirect hosts configured, " \
-                           "all redirect URIs will be rejected in production"
+      if Clavis.configuration.encrypt_tokens &&
+         !Clavis.configuration.use_rails_credentials &&
+         !Clavis.configuration.encryption_key.present?
+        Clavis::Logging.security_warning("Token encryption enabled but no encryption key provided")
       end
 
-      # Log HTTPS enforcement configuration
-      if Clavis.configuration.enforce_https
-        Clavis.logger.info "Clavis: HTTPS enforcement enabled"
-
-        if Clavis.configuration.allow_http_localhost && Rails.env.development?
-          Clavis.logger.info "Clavis: Allowing HTTP for localhost in development environment"
-        end
-
-        if Clavis.configuration.verify_ssl
-          Clavis.logger.info "Clavis: SSL certificate verification enabled"
-          Clavis.logger.info "Clavis: Minimum TLS version: #{Clavis.configuration.minimum_tls_version}"
-        else
-          Clavis.logger.warn "Clavis: SSL certificate verification disabled (not recommended for production)"
-        end
-      else
-        Clavis.logger.warn "Clavis: HTTPS enforcement disabled (not recommended for production)"
+      if !Clavis.configuration.enforce_https && Rails.env.production?
+        Clavis::Logging.security_warning("HTTPS enforcement disabled in production (not recommended)")
       end
 
-      # Log input validation configuration
-      if Clavis.configuration.validate_inputs
-        Clavis.logger.info "Clavis: Input validation enabled"
-      else
-        Clavis.logger.warn "Clavis: Input validation disabled (not recommended for production)"
+      if !Clavis.configuration.verify_ssl && Rails.env.production?
+        Clavis::Logging.security_warning("SSL certificate verification disabled in production (not recommended)")
       end
 
-      if Clavis.configuration.sanitize_inputs
-        Clavis.logger.info "Clavis: Input sanitization enabled"
-      else
-        Clavis.logger.warn "Clavis: Input sanitization disabled (not recommended for production)"
+      if !Clavis.configuration.validate_inputs && Rails.env.production?
+        Clavis::Logging.security_warning("Input validation disabled in production (not recommended)")
       end
 
-      # Log session management configuration
-      if Clavis.configuration.rotate_session_after_login
-        Clavis.logger.info "Clavis: Session rotation after login enabled"
-      else
-        Clavis.logger.warn "Clavis: Session rotation after login disabled (not recommended for production)"
+      if !Clavis.configuration.sanitize_inputs && Rails.env.production?
+        Clavis::Logging.security_warning("Input sanitization disabled in production (not recommended)")
+      end
+
+      if !Clavis.configuration.rotate_session_after_login && Rails.env.production?
+        Clavis::Logging.security_warning("Session rotation after login disabled in production (not recommended)")
       end
     end
 

@@ -33,6 +33,7 @@ module Clavis
             identity.expires_at = if auth_hash[:credentials][:expires_at]
                                     Time.at(auth_hash[:credentials][:expires_at])
                                   end
+            identity.store_standardized_user_info!
             identity.save!
 
             # Yield to the block if given, to allow customization
@@ -46,12 +47,45 @@ module Clavis
 
           def find_or_create_user_from_oauth(auth_hash)
             # Try to find an existing user by email
-            email = auth_hash[:info][:email]
-            user = email.present? ? find_by(email: email) : nil
+            email = auth_hash.dig(:info, :email)
+
+            # Determine the email field name
+            email_field = new.respond_to?(:email) ? :email : :email_address
+
+            # Try to find by email
+            user = nil
+            user = find_by(email_field => email) if email.present?
 
             # If no user found, create a new one
-            user ||= new
-            user.email = email if email.present? && user.respond_to?(:email=)
+            if user.nil?
+              user = new
+
+              # Set email if present
+              user.send("#{email_field}=", email) if email.present? && user.respond_to?("#{email_field}=")
+
+              # Set password if applicable
+              if user.respond_to?(:password=)
+                password = SecureRandom.hex(16)
+                user.password = password
+                user.password_confirmation = password if user.respond_to?(:password_confirmation=)
+              end
+
+              # Set name if available
+              if auth_hash.dig(:info, :name).present?
+                name_parts = auth_hash.dig(:info, :name).split
+                user.first_name = name_parts.first if user.respond_to?(:first_name=)
+                user.last_name = name_parts[1..].join(" ") if name_parts.size > 1 && user.respond_to?(:last_name=)
+              end
+
+              # Set other attributes if available
+              if user.respond_to?(:avatar_url=) && auth_hash.dig(:info, :image).present?
+                user.avatar_url = auth_hash.dig(:info, :image)
+              end
+
+              # Save user
+              user.save!
+            end
+
             user
           end
         end
@@ -85,11 +119,11 @@ module Clavis
             )
 
             identity.token
-          rescue Clavis::UnsupportedOperation => e
-            Rails.logger.info("Token refresh not supported for #{provider}: #{e.message}")
+          rescue Clavis::UnsupportedOperation
+            # For unsupported operations, just return the current token
             identity.token
-          rescue Clavis::Error => e
-            Rails.logger.error("Failed to refresh token for #{provider}: #{e.message}")
+          rescue Clavis::Error
+            # For other errors, return nil
             nil
           end
         end
@@ -102,6 +136,46 @@ module Clavis
             refresh_oauth_token(provider)
           else
             identity.token
+          end
+        end
+
+        # Returns the OAuth avatar URL from the most recent identity
+        # or from a specific provider if specified
+        def oauth_avatar_url(provider = nil)
+          identity = provider ? oauth_identity_for(provider) : latest_oauth_identity
+          return nil unless identity
+
+          standardized = identity.auth_data&.dig("standardized") || identity.auth_data&.dig(:standardized)
+          standardized&.dig("avatar_url") || standardized&.dig(:avatar_url)
+        end
+
+        # Returns the OAuth name from the most recent identity
+        # or from a specific provider if specified
+        def oauth_name(provider = nil)
+          identity = provider ? oauth_identity_for(provider) : latest_oauth_identity
+          return nil unless identity
+
+          standardized = identity.auth_data&.dig("standardized") || identity.auth_data&.dig(:standardized)
+          standardized&.dig("name") || standardized&.dig(:name)
+        end
+
+        # Returns the OAuth email from the most recent identity
+        # or from a specific provider if specified
+        def oauth_email(provider = nil)
+          identity = provider ? oauth_identity_for(provider) : latest_oauth_identity
+          return nil unless identity
+
+          standardized = identity.auth_data&.dig("standardized") || identity.auth_data&.dig(:standardized)
+          standardized&.dig("email") || standardized&.dig(:email)
+        end
+
+        def latest_oauth_identity
+          # Handle both ActiveRecord collections and arrays
+          if oauth_identities.respond_to?(:order)
+            oauth_identities.order(updated_at: :desc).first
+          else
+            # For non-ActiveRecord, sort manually
+            oauth_identities.max_by { |identity| identity.updated_at || Time.at(0) }
           end
         end
       end

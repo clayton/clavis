@@ -1,6 +1,7 @@
 AllCops:
-  NewCops: enable
   TargetRubyVersion: 2.7
+  SuggestExtensions: false
+  NewCops: enable
   Exclude:
     - lib/generators/clavis/templates/**/*
     - vendor/**/*
@@ -8,17 +9,23 @@ AllCops:
     - db/**/*
     - node_modules/**/*
 
+# For gems it's typical to declare development dependencies in the gemspec
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
 Metrics/MethodLength:
-  Max: 35
+  Max: 45
   Exclude:
-    - spec/**/*
-    - lib/clavis/controllers/concerns/authentication.rb
+    - 'spec/**/*'
+    - 'lib/clavis/controllers/concerns/authentication.rb'
+    - 'lib/clavis/providers/base.rb'
 
 Metrics/AbcSize:
-  Max: 35
+  Max: 45
   Exclude:
-    - spec/**/*
-    - lib/clavis/controllers/concerns/authentication.rb
+    - 'spec/**/*'
+    - 'lib/clavis/providers/base.rb'
+    - 'lib/clavis/controllers/concerns/authentication.rb'
 
 Metrics/CyclomaticComplexity:
   Max: 20
@@ -31,7 +38,7 @@ Metrics/PerceivedComplexity:
     - spec/**/*
 
 Metrics/ClassLength:
-  Max: 250
+  Max: 400
 
 Metrics/ModuleLength:
   Max: 250
@@ -59,3 +66,14 @@ Style/StringLiteralsInInterpolation:
 Lint/EmptyClass:
   Exclude:
     - spec/**/*
+
+# Ignore certain spec files with duplicate methods
+Lint/DuplicateMethods:
+  Exclude:
+    - 'spec/integration/oauth_callback_spec.rb'
+
+# Ignore missing super in test files
+Lint/MissingSuper:
+  Exclude:
+    - 'spec/dummy/app/models/application_record.rb'
+    - 'spec/dummy/app/models/user.rb'

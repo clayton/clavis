@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# This script runs controller tests with proper Rails environment setup
+
+require "bundler/setup"
+ENV["RAILS_ENV"] = "test"
+
+# Set up in-memory database
+require "active_record"
+ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
+
+# Load schema
+require_relative "../spec/dummy/db/schema"
+
+# Run the controller tests
+system("bundle exec rspec spec/clavis/controllers/*_spec.rb") 

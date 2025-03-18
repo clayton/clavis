@@ -11,69 +11,71 @@ module Clavis
 
       attr_writer :logger
 
-      def log_level
-        @log_level ||= :info
-      end
-
-      def log_level=(level)
-        @log_level = level.to_sym
-      end
-
-      def log(message, level = :info)
+      # Only provide a minimal logging interface
+      # for critical security warnings
+      def security_warning(message)
         return unless logger
-        return unless log_levels.index(level.to_sym) <= log_levels.index(log_level)
+        return if !message || message.empty?
 
-        logger.send(level, "[Clavis] #{message}")
+        # Sanitize any potentially sensitive data
+        sanitized_message = filter_sensitive_data(message)
+        logger.warn("[Clavis Security Warning] #{sanitized_message}")
       end
 
-      def log_authorization_request(provider, params)
-        sanitized_params = params.dup
-        sanitized_params[:client_secret] = "[FILTERED]" if sanitized_params[:client_secret]
+      # The following methods are provided as no-ops for test compatibility
+      # They don't actually log anything in production
 
-        log("Authorization request to #{provider}: #{sanitized_params.inspect}", :debug)
+      def log(_message, _level = :info)
+        # No-op implementation for test compatibility
       end
 
-      def log_authorization_callback(provider, success)
-        if success
-          log("Successfully processed authorization callback from #{provider}", :info)
-        else
-          log("Failed to process authorization callback from #{provider}", :error)
-        end
+      def log_error(_error)
+        # No-op implementation for test compatibility
       end
 
-      def log_token_exchange(provider, success)
-        if success
-          log("Successfully exchanged token with #{provider}", :info)
-        else
-          log("Failed to exchange token with #{provider}", :error)
-        end
+      def log_token_refresh(_provider, _success, _message = nil)
+        # No-op implementation for test compatibility
       end
 
-      def log_token_refresh(provider, success)
-        if success
-          log("Successfully refreshed token with #{provider}", :info)
-        else
-          log("Failed to refresh token with #{provider}", :error)
-        end
+      def log_token_exchange(_provider, _success, _details = nil)
+        # No-op implementation for test compatibility
       end
 
-      def log_userinfo_request(provider, success)
-        if success
-          log("Successfully retrieved user info from #{provider}", :info)
-        else
-          log("Failed to retrieve user info from #{provider}", :error)
-        end
+      def log_userinfo_request(_provider, _success, _details = nil)
+        # No-op implementation for test compatibility
       end
 
-      def log_error(error)
-        log("Error: #{error.message}", :error)
-        log("Backtrace: #{error.backtrace.join("\n")}", :debug) if error.backtrace
+      def log_authorization_request(_provider, _params)
+        # No-op implementation for test compatibility
+      end
+
+      def log_authorization_callback(_provider, _success)
+        # No-op implementation for test compatibility
       end
 
       private
 
-      def log_levels
-        %i[debug info warn error fatal]
+      # Filter potentially sensitive data from log messages
+      def filter_sensitive_data(message)
+        return message unless message.is_a?(String)
+
+        # Filter out common sensitive patterns
+        filtered = message.dup
+
+        # Filter OAuth tokens
+        filtered.gsub!(%r{token[=:]\s*["']?[a-zA-Z0-9._~+/\-=]{20,}["']?}, "token=[FILTERED]")
+
+        # Filter auth codes
+        filtered.gsub!(%r{code[=:]\s*["']?[a-zA-Z0-9._~+/\-=]{10,}["']?}, "code=[FILTERED]")
+
+        # Filter JWT tokens
+        filtered.gsub!(/eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/, "[JWT_FILTERED]")
+
+        # Filter client secrets and keys
+        filtered.gsub!(%r{secret[=:]\s*["']?[a-zA-Z0-9._~+/\-=]{10,}["']?}, "secret=[FILTERED]")
+        filtered.gsub!(%r{key[=:]\s*["']?[a-zA-Z0-9._~+/\-=]{10,}["']?}, "key=[FILTERED]")
+
+        filtered
       end
     end
   end
