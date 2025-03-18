@@ -14,15 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - ruby-version: '3.0.6'
-            rails-version: '7.0'
-            gemfile: 'gemfiles/rails_70.gemfile'
-          - ruby-version: '3.2.3'
-            rails-version: '7.1'
-            gemfile: 'gemfiles/rails_71.gemfile'
-          - ruby-version: '3.3.0'
-            rails-version: '7.2'
-            gemfile: 'gemfiles/rails_72.gemfile'
           - ruby-version: '3.3.0'
             rails-version: '8.0'
             gemfile: 'gemfiles/rails_80.gemfile'

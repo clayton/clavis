@@ -1,29 +1,71 @@
 name: CI Local
 
-# This workflow is only for local testing with act
-# It will not run automatically on GitHub
+# This file is used to run tests locally that match the GitHub Actions matrix
+# You can run this with the 'act' tool: https://github.com/nektos/act
+# Install with: brew install act
+
 on:
-  workflow_dispatch: # Manual trigger only, won't run automatically
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: Test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ruby-version: '3.0.6'
+            rails-version: '7.0'
+            gemfile: 'gemfiles/rails_70.gemfile'
+          - ruby-version: '3.2.3'
+            rails-version: '7.1'
+            gemfile: 'gemfiles/rails_71.gemfile'
+          - ruby-version: '3.3.0'
+            rails-version: '7.2'
+            gemfile: 'gemfiles/rails_72.gemfile'
+          - ruby-version: '3.3.0'
+            rails-version: '8.0'
+            gemfile: 'gemfiles/rails_80.gemfile'
+          - ruby-version: '3.4.1'
+            rails-version: '8.0'
+            gemfile: 'gemfiles/rails_80.gemfile'
+          
+    name: Ruby ${{ matrix.ruby-version }} | Rails ${{ matrix.rails-version }}
+    
     steps:
-      - name: Install required packages
-        run: |
-          apt-get update
-          apt-get install -y git build-essential pkg-config libsqlite3-dev
+      - uses: actions/checkout@v4
       
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: false
+          
+      - name: Setup bundle cache
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-${{ hashFiles('**/clavis.gemspec') }}-${{ hashFiles('**/${{ matrix.gemfile }}') }}-v1
+          restore-keys: |
+            ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-
+            
       - name: Install dependencies
+        env:
+          BUNDLE_GEMFILE: ${{ matrix.gemfile }}
         run: |
-          gem install bundler
           bundle config set --local path vendor/bundle
+          bundle config set --local with 'test'
           bundle install --jobs 4 --retry 3
           
       - name: Run tests
-        run: bundle exec rspec || echo "Tests failed, but we'll continue anyway for local testing"
-        
+        env:
+          BUNDLE_GEMFILE: ${{ matrix.gemfile }}
+        run: bundle exec rake all_tests
+
   lint:
     runs-on: ubuntu-latest
     name: Lint

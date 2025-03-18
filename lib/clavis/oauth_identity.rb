@@ -10,13 +10,8 @@ module Clavis
       validates :authenticatable, presence: true
       validates :uid, uniqueness: { scope: :provider }
 
-      # Use serialize with a single argument if Rails 7.1+ is detected
-      if defined?(Rails::VERSION) &&
-         Gem::Version.new(Rails::VERSION::STRING) >= Gem::Version.new("7.1")
-        serialize :auth_data
-      else
-        serialize :auth_data, JSON
-      end
+      # Rails 8.0+ serialization
+      serialize :auth_data
 
       # Override token getter to decrypt the token
       def token

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# frozen_string_literal: true
+
+# This script allows you to run the test matrix locally
+# Example usage:
+# bin/matrix_test 3.4.1 gemfiles/rails_80.gemfile
+# bin/matrix_test all
+set -e
+
+function run_test {
+  ruby_version=$1
+  gemfile=$2
+  echo "========================================================"
+  echo "Testing with Ruby $ruby_version and $gemfile"
+  echo "========================================================"
+  
+  # Check if the needed Ruby version is installed
+  if ! rbenv versions | grep -q "$ruby_version"; then
+    echo "Ruby $ruby_version is not installed. Install it with:"
+    echo "rbenv install $ruby_version"
+    return 1
+  fi
+  
+  # Use the specified Ruby version
+  RBENV_VERSION=$ruby_version
+  
+  # Use the specified Gemfile
+  BUNDLE_GEMFILE=$gemfile
+  
+  # Run bundle install and tests
+  echo "Installing gems with $gemfile..."
+  RBENV_VERSION=$ruby_version BUNDLE_GEMFILE=$gemfile bundle install
+  echo "Running tests..."
+  RBENV_VERSION=$ruby_version BUNDLE_GEMFILE=$gemfile bundle exec rake all_tests
+}
+
+# If "all" is specified, run all combinations
+if [ "$1" = "all" ]; then
+  combinations=(
+    "3.0.6 gemfiles/rails_70.gemfile"
+    "3.2.3 gemfiles/rails_71.gemfile"
+    "3.3.0 gemfiles/rails_72.gemfile"
+    "3.3.0 gemfiles/rails_80.gemfile"
+    "3.4.1 gemfiles/rails_80.gemfile"
+  )
+  
+  for combo in "${combinations[@]}"; do
+    set -- $combo
+    run_test $1 $2
+  done
+else
+  # Run a specific combination
+  run_test $1 $2
+fi 

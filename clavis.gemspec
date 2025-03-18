@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = "A Ruby gem for OIDC and OAuth2. Easily integrate with your favorite identity provider."
   spec.homepage = "https://github.com/claytonlengel/clavis"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 2.7.0"
+  spec.required_ruby_version = ">= 3.3.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 
@@ -37,7 +37,7 @@ Gem::Specification.new do |spec|
   # Uncomment to register a new dependency of your gem
   spec.add_dependency "faraday", "~> 2.7"
   spec.add_dependency "jwt", "~> 2.7"
-  spec.add_dependency "rails", ">= 7.0"
+  spec.add_dependency "rails", "~> 8.0"
 
   # Dependencies for Ruby 3.4+ compatibility
   spec.add_dependency "bigdecimal"

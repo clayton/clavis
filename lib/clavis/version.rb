@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Clavis
-  VERSION = "0.3.4"
+  VERSION = "0.5.0"
 end

@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2023-03-18
+
+### Changed
+- Updated to require Rails 8.0 only
+- Updated minimum Ruby version to 3.3.0
+- Removed support for Rails 7.x
+- Simplified serialization code now that we only support Rails 8.0+
+
+## [0.3.4] - 2023-03-18
+
+### Fixed
+- Resolved compatibility issues with Rails 8 eager loading
+- Fixed timezone handling in OauthIdentity expirations
+- Added test coverage for Rails 8.0 and Ruby 3.4
+
 ## [0.3.1] - 2023-03-19
 
 ### Added
