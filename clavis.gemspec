@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "A Ruby gem for OIDC and OAuth2."
   spec.description = "A Ruby gem for OIDC and OAuth2. Easily integrate with your favorite identity provider."
-  spec.homepage = "https://github.com/claytonlengel/clavis"
+  spec.homepage = "https://github.com/clayton/clavis"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.3.0"
 
