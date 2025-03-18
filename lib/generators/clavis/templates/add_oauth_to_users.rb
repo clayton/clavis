@@ -12,6 +12,6 @@ class AddOauthToUsers < ActiveRecord::Migration[6.0]
     add_column :users, :oauth_refresh_token, :string
     add_column :users, :oauth_avatar_url, :string
 
-    add_index :users, [:provider, :uid], unique: true
+    add_index :users, %i[provider uid], unique: true
   end
-end 
+end
