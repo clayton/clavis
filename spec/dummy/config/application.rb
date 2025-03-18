@@ -14,7 +14,8 @@ module Dummy
   class Application < Rails::Application
     # Load an appropriate default version based on Rails version
     if Rails::VERSION::MAJOR >= 8
-      config.load_defaults Rails::VERSION::MAJOR
+      # For Rails 8+, use a known version (7.1) to avoid "Unknown version" errors
+      config.load_defaults 7.1
     else
       config.load_defaults Rails::VERSION::STRING.to_f
     end
@@ -37,5 +38,12 @@ module Dummy
 
     # Turn off I18n deprecation warnings
     I18n.enforce_available_locales = false if I18n.respond_to?(:enforce_available_locales=)
+
+    # Set Rails 8.1 timezone handling to avoid deprecation warnings
+    if defined?(ActiveSupport) && ActiveSupport.respond_to?(:config) &&
+       ActiveSupport.config.respond_to?(:active_support) &&
+       ActiveSupport.config.active_support.respond_to?(:to_time_preserves_timezone=)
+      config.active_support.to_time_preserves_timezone = :zone
+    end
   end
 end
