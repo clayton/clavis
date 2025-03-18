@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2023-03-19
+
+### Added
+- Improved provider buttons with proper branding according to each provider's guidelines
+- Enhanced SVG icons for all supported providers with official logos and colors
+- Added branded provider button styles to match each provider's requirements
+- Updated documentation with information about the branded buttons
+
+### Changed
+- Redesigned button CSS to provide a more professional look and feel
+- Refined the display of button icons and text for better alignment
+- Updated the README to clarify information about button styling options
+
+## [0.3.0] - 2023-03-18
+
+### Added
+- Standardized user information extraction from all OAuth providers
+- Added methods to access email, name, and avatar URL from any provider
+- Helper methods on User model via OauthAuthenticatable: `oauth_email`, `oauth_name`, and `oauth_avatar_url`
+- Storage of standardized user info in the auth_data JSON field
+
+## [0.2.3] - 2023-03-25
+
+### Fixed
+- Added missing `process_callback` method to Provider::Base class for handling OAuth callbacks
+- Fixed authorization code validation to handle special characters in Google's OAuth codes
+- Improved JSON parsing to handle both string and hash response bodies from OAuth providers
+- Made token and userinfo validation more permissive to work with various OAuth provider responses
+- Added comprehensive integration tests for the OAuth callback flow
+
 ## [0.2.2] - 2023-03-19
 
 ### Fixed

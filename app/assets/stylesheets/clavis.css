@@ -1,8 +1,9 @@
 /* Clavis OAuth Button Styles */
 
-.clavis-button {
+.clavis-oauth-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   padding: 10px 16px;
   border-radius: 4px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -11,70 +12,109 @@
   text-decoration: none;
   margin: 5px 0;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   cursor: pointer;
-  color: #fff;
+  min-width: 240px;
+  height: 40px;
+  box-sizing: border-box;
 }
 
-.clavis-button .clavis-icon {
+.clavis-oauth-button .clavis-icon {
   width: 18px;
   height: 18px;
   margin-right: 10px;
   fill: currentColor;
 }
 
-.clavis-button span {
+.clavis-oauth-button span {
   line-height: 1;
 }
 
-/* Google */
-.clavis-google-button {
-  background-color: #4285F4;
-  color: white;
+/* Google - Following Google branding guidelines */
+.clavis-oauth-button--google {
+  background-color: white;
+  color: #757575;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.clavis-google-button:hover {
-  background-color: #3367D6;
+.clavis-oauth-button--google:hover {
+  background-color: #fafafa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.clavis-oauth-button--google .clavis-icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* GitHub */
-.clavis-github-button {
+.clavis-oauth-button--github {
   background-color: #24292e;
   color: white;
 }
 
-.clavis-github-button:hover {
-  background-color: #000;
+.clavis-oauth-button--github:hover {
+  background-color: #2c3238;
+  border-color: #24292e;
 }
 
-/* Apple */
-.clavis-apple-button {
-  background-color: #000;
+/* Apple - Following Apple's Sign in with Apple guidelines */
+.clavis-oauth-button--apple {
+  background-color: black;
   color: white;
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-.clavis-apple-button:hover {
+.clavis-oauth-button--apple:hover {
   background-color: #333;
 }
 
-/* Facebook */
-.clavis-facebook-button {
+.clavis-oauth-button--apple .clavis-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Facebook - Following Facebook branding guidelines */
+.clavis-oauth-button--facebook {
   background-color: #1877F2;
   color: white;
+  border: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-weight: bold;
 }
 
-.clavis-facebook-button:hover {
-  background-color: #0b5fcc;
+.clavis-oauth-button--facebook:hover {
+  background-color: #166fe5;
+  border-color: #166fe5;
 }
 
-/* Microsoft */
-.clavis-microsoft-button {
-  background-color: #2F2F2F;
-  color: white;
+/* Microsoft - Following Microsoft branding guidelines */
+.clavis-oauth-button--microsoft {
+  background-color: white;
+  color: #5e5e5e;
+  border: 1px solid #8c8c8c;
 }
 
-.clavis-microsoft-button:hover {
-  background-color: #000;
+.clavis-oauth-button--microsoft:hover {
+  background-color: #f0f0f0;
+}
+
+.clavis-oauth-button--microsoft .clavis-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Generic OAuth button */
+.clavis-oauth-button--oauth {
+  background-color: #f8f9fa;
+  color: #202124;
+  border: 1px solid #dadce0;
+}
+
+.clavis-oauth-button--oauth:hover {
+  background-color: #f1f3f4;
 }
 
 /* Error message */

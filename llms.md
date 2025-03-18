@@ -5,6 +5,7 @@ This document provides detailed information about the Clavis gem for large langu
 ## Table of Contents
 
 1. [Overview](#overview)
+   - [Key Assumptions](#key-assumptions)
 2. [Architecture](#architecture)
 3. [Core Components](#core-components)
 4. [Authentication Flow](#authentication-flow)
@@ -17,10 +18,22 @@ This document provides detailed information about the Clavis gem for large langu
 8. [Error Handling](#error-handling)
 9. [Security Considerations](#security-considerations)
 10. [Integration Points](#integration-points)
+11. [Usage Examples](#usage-examples)
+    - [Basic Setup](#basic-setup)
+    - [Accessing Standardized User Info](#accessing-standardized-user-info)
+    - [Controller Integration](#controller-integration)
 
 ## Overview
 
 Clavis is a Ruby gem that implements the OAuth 2.0 and OpenID Connect (OIDC) protocols for Rails applications. It focuses on providing a simple "Sign in with ____" experience while maintaining security and adherence to relevant specifications.
+
+### Key Assumptions
+
+Clavis makes the following fundamental assumptions about its usage:
+
+1. You're using Rails 7+ for your application
+2. You've got a User model and some form of authentication already in place, ideally the Rails 8 authentication generator
+3. You're trying to go fast and not spend time on configuration details
 
 ## Architecture
 
@@ -304,6 +317,29 @@ end
 # Run migrations
 $ rails db:migrate
 ```
+
+### Accessing Standardized User Info
+
+Clavis provides built-in helper methods for extracting standardized user information (email, name, avatar URL) from OAuth providers:
+
+```ruby
+# These helper methods are available on User model instances
+# when the model includes Clavis::Models::OauthAuthenticatable
+
+# Get user info from most recent OAuth provider
+user.oauth_email       # => "user@example.com"
+user.oauth_name        # => "John Doe"
+user.oauth_avatar_url  # => "https://example.com/avatar.jpg"
+
+# Get user info from a specific provider
+user.oauth_email("google")       # => "user@example.com"
+user.oauth_name("github")        # => "John Doe" 
+user.oauth_avatar_url("facebook") # => "https://example.com/avatar.jpg"
+```
+
+These methods automatically normalize user information across different providers, handling the variations in how each provider structures their user data. This simplifies accessing common user attributes without needing provider-specific code.
+
+The implementation uses a `UserInfoNormalizer` class internally to extract and standardize this information from the OAuth provider's response data stored in the `auth_data` field of the `OauthIdentity` model.
 
 ### Controller Integration
 

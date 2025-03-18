@@ -2,34 +2,51 @@
 
 Clavis is a Ruby gem that provides an easy-to-use implementation of OIDC (OpenID Connect) and OAuth2 functionality for Rails applications. It focuses on simplifying the "Sign in with ____" experience while adhering to relevant security standards and best practices.
 
+It's unapologetically Rails-first and opinionated. It's not a general-purpose authentication library, but rather a library that makes it easier to integrate with popular OAuth providers.
+
+You should be able to install and go in 5 minutes.
+
 > 🔑 **Fun fact**: The name "Clavis" comes from the Latin word for "key" - a fitting name for a gem that unlocks secure authentication!
+
+If you are an AI Agent or LLM, read this: [llms.md](llms.md)
+
+If you are a human, who likes reading documentation, and you recently touched grass, and you have been experiencing insomnia, and you have already read the classics, and you're bored, and you're still here, then keep reading.
 
 ## Table of Contents
 
-1. [Installation](#installation)
-2. [Basic Configuration](#basic-configuration)
-3. [Database Setup](#database-setup)
-4. [Controller Integration](#controller-integration)
-5. [User Model Integration](#user-model-integration)
-6. [View Integration](#view-integration)
-7. [Routes Configuration](#routes-configuration)
-8. [Token Refresh](#token-refresh)
-9. [Custom Providers](#custom-providers)
+1. [Assumptions](#assumptions)
+2. [Installation](#installation)
+3. [Basic Configuration](#basic-configuration)
+4. [Database Setup](#database-setup)
+5. [Controller Integration](#controller-integration)
+6. [User Model Integration](#user-model-integration)
+7. [View Integration](#view-integration)
+8. [Routes Configuration](#routes-configuration)
+9. [Token Refresh](#token-refresh)
+10. [Custom Providers](#custom-providers)
    - [Using the Generic Provider](#using-the-generic-provider)
    - [Creating a Custom Provider Class](#creating-a-custom-provider-class)
    - [Registering Custom Providers](#registering-custom-providers)
-10. [Provider-Specific Setup](#provider-specific-setup)
+11. [Provider-Specific Setup](#provider-specific-setup)
     - [Google](#google)
     - [GitHub](#github)
     - [Apple](#apple)
     - [Facebook](#facebook)
     - [Microsoft](#microsoft)
-11. [Testing Your Integration](#testing-your-integration)
-12. [Troubleshooting](#troubleshooting)
-13. [Development](#development)
-14. [Contributing](#contributing)
-15. [License](#license)
-16. [Code of Conduct](#code-of-conduct)
+12. [Testing Your Integration](#testing-your-integration)
+13. [Troubleshooting](#troubleshooting)
+14. [Development](#development)
+15. [Contributing](#contributing)
+16. [License](#license)
+17. [Code of Conduct](#code-of-conduct)
+
+## Assumptions
+
+Before installing Clavis, note these assumptions:
+
+1. You're using Rails 7+
+2. You've got a User model and some form of authentication already, ideally the Rails 8 authentication generator
+3. You are trying to go fast not screw around with configuration details
 
 ## Installation
 
@@ -305,6 +322,18 @@ end
 ```
 
 With this option, you can use either `oauth_button` or `clavis_oauth_button` in any view, but it may conflict with Rails' form helpers.
+
+### Branded Provider Buttons
+
+Clavis provides properly branded provider buttons that follow each provider's branding guidelines:
+
+- **Google**: Clean white button with the Google logo in their official colors
+- **GitHub**: Black button with the GitHub logo
+- **Apple**: Black button with the Apple logo, using Apple's recommended font
+- **Facebook**: Blue button with the Facebook logo, using Facebook's brand color
+- **Microsoft**: White button with the Microsoft logo in its signature 4-color grid
+
+These buttons look professional by default and are designed to be immediately recognizable to users.
 
 ### Customizing Buttons
 
@@ -753,3 +782,29 @@ The gem is available as open source under the terms of the [MIT License](https:/
 ## Code of Conduct
 
 Everyone interacting in the Clavis project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/clayton/clavis/blob/main/CODE_OF_CONDUCT.md).
+
+## Usage
+
+### Accessing Standardized User Info
+
+Clavis automatically extracts and standardizes user information from all OAuth providers. This makes it easy to access common user data like email, name, and avatar URL regardless of which provider the user authenticated with.
+
+These helper methods are available on your User model if it includes the `OauthAuthenticatable` concern:
+
+```ruby
+# Get the user's email from their most recent OAuth provider
+current_user.oauth_email
+
+# Get the user's name from their most recent OAuth provider
+current_user.oauth_name
+
+# Get the user's avatar URL from their most recent OAuth provider
+current_user.oauth_avatar_url
+
+# You can also specify a provider:
+current_user.oauth_email("google")
+current_user.oauth_name("github")
+current_user.oauth_avatar_url("facebook")
+```
+
+These methods work out of the box with any OAuth provider supported by Clavis, making it easy to display user information in your views without writing custom provider-specific code.
