@@ -58,6 +58,25 @@ Clavis is a Ruby gem that implements the OAuth 2.0 and OpenID Connect (OIDC) pro
 
 ## Implementation Details
 
+### Callback URI Format
+
+The callback URI is a critical part of the OAuth flow, and it must be correctly configured both in the provider dashboard and in the Clavis configuration. The proper format is:
+
+```ruby
+https://your-domain.com/auth/:provider/callback
+```
+
+Where `:provider` is replaced with the name of the provider (e.g., google, github, etc.).
+
+A common mistake is setting just the base domain (e.g., `http://localhost:3000`) as the callback URI in the provider's dashboard. This will cause authentication to fail because the provider will not redirect back to the correct endpoint.
+
+Examples of correctly formatted callback URIs:
+- For Google: `https://example.com/auth/google/callback`
+- For GitHub: `https://example.com/auth/github/callback` 
+- For development: `http://localhost:3000/auth/google/callback`
+
+The callback URI must exactly match what is configured in the provider's dashboard, including the protocol (http/https), domain, port (if non-standard), and the full path.
+
 ### OAuth Flow Implementation
 
 The core OAuth 2.0 Authorization Code Flow is implemented as follows:
@@ -607,11 +626,14 @@ end
      - Verify provider name spelling matches configuration
 
 2. **Invalid Callback Error**
-   - **Symptoms**: "Invalid callback URL" error from provider
+   - **Symptoms**: "Invalid redirect URI" or "redirect_uri_mismatch" error from provider
    - **Solutions**:
-     - Verify redirect_uri matches exactly what is configured in provider dashboard
-     - Check for http vs https mismatch
-     - Ensure the callback URL is registered with the provider
+     - Verify the callback URI in your Clavis configuration EXACTLY matches what's registered in the provider dashboard
+     - Common mistake: Using just the domain (e.g., `http://localhost:3000`) instead of full path (`http://localhost:3000/auth/google/callback`)
+     - Check for protocol mismatches (http vs https)
+     - Ensure port numbers are included if using non-standard ports
+     - Different providers might have different requirements for trailing slashes
+     - Some providers (like Google) may add extra query parameters to their callback validation, which should be ignored
 
 3. **State Parameter Mismatch**
    - **Symptoms**: InvalidState error after returning from provider

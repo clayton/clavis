@@ -80,7 +80,7 @@ Clavis.configure do |config|
     github: {
       client_id: ENV['GITHUB_CLIENT_ID'],
       client_secret: ENV['GITHUB_CLIENT_SECRET'],
-      redirect_uri: 'https://your-app.com/auth/github/callback'
+      redirect_uri: 'http://localhost:3000/auth/github/callback'
     }
     # Add other providers as needed
   }
@@ -90,6 +90,8 @@ Clavis.configure do |config|
   config.log_level = :info
 end
 ```
+
+> ⚠️ **Important**: Always use the complete callback URI including the provider path (`/auth/:provider/callback`). A common mistake is setting just the domain (e.g., `http://localhost:3000`), which will cause authentication to fail.
 
 ## Database Setup
 
@@ -612,6 +614,23 @@ redirect_to auth_url(:example_oauth)
 
 ## Provider-Specific Setup
 
+### Callback URI Format
+
+For all providers, you must configure the correct callback URI format. The proper format is:
+
+```
+https://your-domain.com/auth/:provider/callback
+```
+
+Where `:provider` is replaced with the name of the provider (e.g., google, github, etc.).
+
+Examples:
+- For Google: `https://your-domain.com/auth/google/callback`
+- For GitHub: `https://your-domain.com/auth/github/callback`
+- For development: `http://localhost:3000/auth/google/callback`
+
+> ⚠️ **Common mistake**: Setting just the domain (e.g., `http://localhost:3000`) as the callback URI will cause authentication to fail. Always include the full path with `/auth/:provider/callback`.
+
 ### Google
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
@@ -621,6 +640,8 @@ redirect_to auth_url(:example_oauth)
 5. Select "Web application" as the application type
 6. Add your application's domain to "Authorized JavaScript origins"
 7. Add your callback URL to "Authorized redirect URIs" (e.g., `https://your-app.com/auth/google/callback`)
+   - For development: `http://localhost:3000/auth/google/callback`
+   - Make sure to use the complete path including `/auth/google/callback`, not just the domain
 8. Copy the Client ID and Client Secret to your Clavis configuration
 
 For token refresh, Google requires the `access_type=offline` parameter during the initial authorization:
@@ -643,6 +664,8 @@ end
 2. Click "New OAuth App"
 3. Fill in your application details
 4. Set the "Authorization callback URL" to your callback URL (e.g., `https://your-app.com/auth/github/callback`)
+   - For development: `http://localhost:3000/auth/github/callback`
+   - Make sure to use the complete path including `/auth/github/callback`, not just the domain
 5. Click "Register application"
 6. Copy the Client ID and generate a Client Secret
 7. Add these to your Clavis configuration
