@@ -20,6 +20,9 @@ module Dummy
       config.load_defaults Rails::VERSION::STRING.to_f
     end
 
+    # Configure eager loading explicitly to avoid warnings
+    config.eager_load = false if config.eager_load.nil?
+
     # Settings in config/environments/* take precedence over those specified here.
     # Application configuration can go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded after loading
@@ -40,9 +43,8 @@ module Dummy
     I18n.enforce_available_locales = false if I18n.respond_to?(:enforce_available_locales=)
 
     # Set Rails 8.1 timezone handling to avoid deprecation warnings
-    if defined?(ActiveSupport) && ActiveSupport.respond_to?(:config) &&
-       ActiveSupport.config.respond_to?(:active_support) &&
-       ActiveSupport.config.active_support.respond_to?(:to_time_preserves_timezone=)
+    if config.respond_to?(:active_support) &&
+       config.active_support.respond_to?(:to_time_preserves_timezone=)
       config.active_support.to_time_preserves_timezone = :zone
     end
   end

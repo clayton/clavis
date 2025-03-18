@@ -16,14 +16,19 @@ jobs:
         include:
           - ruby-version: '3.0.6'
             rails-version: '7.0'
+            gemfile: 'gemfiles/rails_70.gemfile'
           - ruby-version: '3.2.3'
             rails-version: '7.1'
+            gemfile: 'gemfiles/rails_71.gemfile'
           - ruby-version: '3.3.0'
             rails-version: '7.2'
+            gemfile: 'gemfiles/rails_72.gemfile'
           - ruby-version: '3.3.0'
             rails-version: '8.0'
+            gemfile: 'gemfiles/rails_80.gemfile'
           - ruby-version: '3.4.1'
             rails-version: '8.0'
+            gemfile: 'gemfiles/rails_80.gemfile'
           
     name: Ruby ${{ matrix.ruby-version }} | Rails ${{ matrix.rails-version }}
     
@@ -45,18 +50,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: vendor/bundle
-          key: ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-${{ hashFiles('**/clavis.gemspec') }}-${{ hashFiles('**/Gemfile.lock') }}-v1
+          key: ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-${{ hashFiles('**/clavis.gemspec') }}-${{ hashFiles('**/${{ matrix.gemfile }}') }}-v1
           restore-keys: |
             ${{ runner.os }}-ruby-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}-gems-
             
       - name: Install dependencies
+        env:
+          BUNDLE_GEMFILE: ${{ matrix.gemfile }}
         run: |
           bundle config set --local path vendor/bundle
           bundle config set --local with 'test'
-          
-          # Add the specific Rails version to test with
-          bundle add rails --version "~> ${{ matrix.rails-version }}.0"
           bundle install --jobs 4 --retry 3
           
       - name: Run tests
+        env:
+          BUNDLE_GEMFILE: ${{ matrix.gemfile }}
         run: bundle exec rake all_tests 

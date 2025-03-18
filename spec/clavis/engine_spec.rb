@@ -7,10 +7,8 @@ require "rails_helper"
 require "clavis/engine"
 
 RSpec.describe Clavis::Engine, type: :engine do
-  before do
-    # In Rails 8, mounting engines with overlapping routes can cause conflicts
-    # We'll test the engine properties directly rather than mounting
-  end
+  # No need to mount the engine for testing properties
+  # This avoids route collision issues across Rails versions
 
   it "integrates with Rails as an engine" do
     # Skip mounting which causes route collisions in Rails 8

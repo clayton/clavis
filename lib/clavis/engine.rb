@@ -6,6 +6,11 @@ module Clavis
   class Engine < ::Rails::Engine
     isolate_namespace Clavis
 
+    # Allow the routes to be namespaced with a unique identifier for each mount point
+    # This prevents route name collisions when the engine is mounted multiple times
+    mattr_accessor :route_namespace_id
+    self.route_namespace_id = "clavis"
+
     # Class-level configuration option to control helper inclusion
     mattr_accessor :include_view_helpers
     self.include_view_helpers = true # Default to true
