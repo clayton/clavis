@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2023-03-19
+
+### Fixed
+- Added `allow_other_host: true` to OAuth redirects to fix `ActionController::Redirecting::UnsafeRedirectError` errors in Rails 7
+- This ensures compatibility with stricter cross-origin redirect security in newer Rails versions
+
 ## [0.2.1] - 2023-03-18
 
 ### Changed

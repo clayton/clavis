@@ -36,7 +36,7 @@ module Clavis
             state: state,
             nonce: nonce,
             scope: scope
-          )
+          ), allow_other_host: true
         end
 
         def oauth_callback
@@ -101,7 +101,7 @@ module Clavis
               default: "/"
             )
 
-            redirect_to redirect_uri
+            redirect_to redirect_uri, allow_other_host: true
           end
         end
 
