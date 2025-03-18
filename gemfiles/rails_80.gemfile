@@ -4,9 +4,7 @@ source "https://rubygems.org"
 
 gemspec path: ".."
 
-gem "bigdecimal"
 gem "debug"
-gem "mutex_m"
 gem "puma"
 gem "rails", "~> 8.0.0"
 gem "sqlite3", "~> 2.1"

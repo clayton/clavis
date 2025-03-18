@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.2] - 2023-03-18
+
+### Changed
+- Removed unnecessary bigdecimal and mutex_m dependencies
+
 ## [0.5.1] - 2023-03-18
 
 ### Fixed

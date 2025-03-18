@@ -1,11 +1,9 @@
 PATH
   remote: .
   specs:
-    clavis (0.5.0)
-      bigdecimal
+    clavis (0.5.1)
       faraday (~> 2.7)
       jwt (~> 2.7)
-      mutex_m
       rails (~> 8.0)
 
 GEM
