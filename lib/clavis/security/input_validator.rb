@@ -6,10 +6,10 @@ module Clavis
   module Security
     module InputValidator
       # Regular expressions for validation
-      TOKEN_REGEX = /\A[a-zA-Z0-9\-_.]+\z/.freeze
-      CODE_REGEX = %r{\A[a-zA-Z0-9\-_./=+]+\z}.freeze
-      STATE_REGEX = /\A[a-zA-Z0-9\-_.]+\z/.freeze
-      EMAIL_REGEX = /\A[\w+\-.]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i.freeze
+      TOKEN_REGEX = /\A[a-zA-Z0-9\-_.]+\z/
+      CODE_REGEX = %r{\A[a-zA-Z0-9\-_./=+]+\z}
+      STATE_REGEX = /\A[a-zA-Z0-9\-_.]+\z/
+      EMAIL_REGEX = /\A[\w+\-.]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
 
       # Dangerous schemes that should never be allowed
       DANGEROUS_SCHEMES = %w[javascript data vbscript file].freeze

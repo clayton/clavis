@@ -37,7 +37,7 @@ rescue LoadError
 end
 
 # Load support files (excluding any already loaded)
-Dir[File.expand_path("support/**/*.rb", __dir__)].sort.each do |f|
+Dir[File.expand_path("support/**/*.rb", __dir__)].each do |f|
   next if f.include?("mocks/") && File.basename(f) != "README.md" # Skip mocks, we're in Rails mode
 
   require f

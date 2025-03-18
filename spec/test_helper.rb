@@ -21,7 +21,7 @@ require "capybara/rails"
 require "capybara/rspec"
 
 # Load support files
-Dir[File.expand_path("support/**/*.rb", __dir__)].sort.each { |f| require f }
+Dir[File.expand_path("support/**/*.rb", __dir__)].each { |f| require f }
 
 # Configure ActiveRecord for in-memory SQLite
 ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")

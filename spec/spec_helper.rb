@@ -20,13 +20,13 @@ RSpec.configure do |config|
   config.example_status_persistence_file_path = ".rspec_status"
 
   # Load mocks first
-  Dir[File.expand_path("support/mocks/**/*.rb", __dir__)].sort.each { |f| require f }
+  Dir[File.expand_path("support/mocks/**/*.rb", __dir__)].each { |f| require f }
 
   # Load the clavis gem
   require "clavis"
 
   # Load core support files (excluding special purpose files)
-  Dir[File.expand_path("support/**/*.rb", __dir__)].sort.each do |f|
+  Dir[File.expand_path("support/**/*.rb", __dir__)].each do |f|
     next if f.include?("mocks/") # Already loaded
     next if f.include?("generator_helpers.rb") # Will be loaded by type tag
 

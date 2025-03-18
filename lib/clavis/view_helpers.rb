@@ -154,10 +154,10 @@ module Clavis
     end
 
     # Rails helper methods for non-Rails environments
-    def clavis_content_tag(tag, content_or_options_with_block = nil, options = nil, &block)
+    def clavis_content_tag(tag, content_or_options_with_block = nil, options = nil, &)
       if block_given?
         options = content_or_options_with_block if content_or_options_with_block.is_a?(Hash)
-        content = capture(&block)
+        content = capture(&)
       else
         content = content_or_options_with_block
       end
@@ -168,11 +168,11 @@ module Clavis
       "<#{tag}#{tag_options}>#{content}</#{tag}>"
     end
 
-    def clavis_link_to(name = nil, options = nil, html_options = nil, &block)
+    def clavis_link_to(name = nil, options = nil, html_options = nil, &)
       if block_given?
         html_options = options
         options = name
-        name = capture(&block)
+        name = capture(&)
       end
       options ||= {}
       html_options ||= {}

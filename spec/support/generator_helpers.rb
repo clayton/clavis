@@ -21,9 +21,9 @@ module GeneratorHelpers
     yield File.read(absolute) if block_given?
   end
 
-  def assert_migration(relative, *contents, &block)
+  def assert_migration(relative, *contents, &)
     absolute = migration_file_path(relative)
-    assert_file absolute, *contents, &block
+    assert_file(absolute, *contents, &)
   end
 
   def assert_no_migration(relative)
