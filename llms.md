@@ -4,17 +4,28 @@ This document provides detailed information about the Clavis gem for large langu
 
 ## Quick Start Guide for Implementation
 
-Here's how to implement Clavis in a Rails application with minimal steps:
+Here's how to implement Clavis in a Rails application in just three steps:
 
 ```ruby
 # Step 1: Add to Gemfile
 gem 'clavis'
+```
 
-# Step 2: Run migrations
-# $ rails clavis:install:migrations
-# $ rails db:migrate
+```bash
+# Step 2: Run the installation generator
+# This automatically:
+#   - Creates necessary migrations for OAuth identities
+#   - Adds OAuth fields to your User model (if it exists)
+#   - Creates a configuration initializer
+#   - Mounts the engine at '/auth' in routes.rb
+#   - Sets up route helpers (auth_path, auth_callback_path)
+rails generate clavis:install
+rails db:migrate
+```
 
+```ruby
 # Step 3: Configure a provider (in config/initializers/clavis.rb)
+# The generator created this file for you - just update with your credentials
 Clavis.configure do |config|
   config.providers = {
     github: {
@@ -23,29 +34,24 @@ Clavis.configure do |config|
     }
   }
 end
-
-# Step 4: Mount the engine in routes.rb
-# This automatically sets up all required routes including
-# auth_path and auth_callback_path helpers
-mount Clavis::Engine => "/"
-
-# Step 5: Include in User model
-# app/models/user.rb
-class User < ApplicationRecord
-  include Clavis::Models::OauthAuthenticatable
-  
-  # Helper method for conditional password validation
-  def password_required?
-    !oauth_user?
-  end
-end
 ```
 
-The key components are:
-1. Engine mounting (provides routes automatically)
-2. Provider configuration
-3. Model integration
-4. Optional controller customization (not required for basic functionality)
+### What the Generator Does
+
+The installation generator performs several key setup tasks:
+
+1. **Creates Migrations**: Adds tables for OAuth identities and fields to the User model
+2. **Sets Up Routes**: Mounts the engine at `/auth` and creates route helpers
+3. **Adds Configuration**: Creates a starter initializer file with common settings
+4. **Enhances User Model**: The generator expects your User model to include `Clavis::Models::OauthAuthenticatable`, which it will automatically modify if the model exists
+
+You can then immediately use the route helpers in your views:
+
+```erb
+<%= link_to "Sign in with GitHub", auth_path(:github), class: "button" %>
+```
+
+The generator provides a complete setup that requires minimal manual work beyond adding your OAuth provider credentials.
 
 ## Table of Contents
 

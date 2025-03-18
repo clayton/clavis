@@ -10,7 +10,7 @@ You should be able to install and go in 5 minutes.
 
 ## Quick Start Guide
 
-Get up and running with OAuth authentication in just four steps:
+Get up and running with OAuth authentication in just three steps:
 
 ```ruby
 # 1. Add to your Gemfile and run bundle install
@@ -19,7 +19,11 @@ gem 'clavis'
 
 ```bash
 # 2. Run the installation generator
-# This creates the necessary migrations, initializer, and mounts the engine in routes.rb
+# This automatically:
+#   - Creates the necessary migrations
+#   - Creates a configuration initializer
+#   - Adds OAuth fields to your User model
+#   - Mounts the engine at '/auth' in routes.rb
 rails generate clavis:install
 rails db:migrate
 ```
@@ -37,13 +41,7 @@ Clavis.configure do |config|
 end
 ```
 
-Then in your User model (which the generator should have created or modified for you):
-```ruby
-# app/models/user.rb
-include Clavis::Models::OauthAuthenticatable
-```
-
-And add this button to your login page:
+Then add an OAuth login button to your view:
 ```erb
 <%= link_to "Sign in with GitHub", auth_path(:github), class: "btn" %>
 ```
@@ -154,9 +152,10 @@ end
 
 ## Database Setup
 
-Clavis requires a table to store OAuth identities. The migration should have created a table like this:
+Clavis requires database tables to store OAuth identities and user authentication data. The installation generator automatically creates the necessary migrations for you:
 
 ```ruby
+# This migration is created by the generator for OAuth identities
 create_table :clavis_oauth_identities do |t|
   t.references :user, polymorphic: true, null: false, index: true
   t.string :provider, null: false
@@ -169,6 +168,21 @@ create_table :clavis_oauth_identities do |t|
   
   t.index [:provider, :uid], unique: true
 end
+
+# The generator also adds these fields to your User model
+add_column :users, :provider, :string
+add_column :users, :uid, :string
+add_column :users, :oauth_token, :string
+add_column :users, :oauth_expires_at, :datetime
+add_column :users, :oauth_refresh_token, :string
+add_column :users, :oauth_avatar_url, :string
+add_index :users, [:provider, :uid], unique: true
+```
+
+Simply run the migrations after running the generator:
+
+```bash
+rails db:migrate
 ```
 
 ## Integrating with Existing Authentication
@@ -186,21 +200,7 @@ If you already have an authentication system in your application, follow these s
 3. **Include the OauthAuthenticatable module** in your User model:
    ```ruby
    # app/models/user.rb
-   class User < ApplicationRecord
-     include Clavis::Models::OauthAuthenticatable
-     
-     # Your existing authentication code
-     has_secure_password
-     
-     # Optional: Customize how OAuth users are created/found
-     def self.find_for_oauth(auth_hash)
-       super do |user, auth|
-         # Set additional user attributes from auth data
-         user.name = auth[:info][:name] if user.respond_to?(:name=)
-         # Any other attribute assignments...
-       end
-     end
-   end
+   include Clavis::Models::OauthAuthenticatable
    ```
 
 4. **Create or modify your authentication controller (optional)**:
@@ -306,21 +306,45 @@ end
 
 ## User Model Integration
 
-Include the OAuth authenticatable concern in your User model:
+The installation generator adds necessary fields to your User model and ensures it includes the `OauthAuthenticatable` module. This is done automatically if your User model exists when you run the generator.
+
+### What the Generator Does
+
+If your application has a User model, the generator:
+
+1. Adds migration to create OAuth-related fields
+2. Modifies your User model to include the `OauthAuthenticatable` module
+
+### Manual Integration
+
+If you need to manually include the module (or the generator couldn't find your User model), add this to your model:
 
 ```ruby
 # app/models/user.rb
 class User < ApplicationRecord
-  include Clavis::Models::Concerns::OauthAuthenticatable
+  include Clavis::Models::OauthAuthenticatable
   
-  # Optional: Customize user creation
-  def self.find_for_oauth(auth_hash)
-    super do |user, auth|
-      # Set additional user attributes based on the auth data
-      user.name = auth[:info][:name]
-      user.email = auth[:info][:email]
-      user.avatar_url = auth[:info][:picture] if user.respond_to?(:avatar_url)
-    end
+  # Your existing code...
+  
+  # Optional: Use oauth_user? helper for conditional password validation
+  def password_required?
+    !oauth_user?
+  end
+end
+```
+
+### The `find_for_oauth` Method
+
+Clavis provides a default implementation of `find_for_oauth` that finds or creates users based on the OAuth data. You can customize this method in your User model:
+
+```ruby
+# app/models/user.rb
+def self.find_for_oauth(auth_hash)
+  super do |user, auth|
+    # Additional customization after the user is found or created
+    user.name = auth[:info][:name]
+    user.email = auth[:info][:email]
+    user.avatar_url = auth[:info][:picture] if user.respond_to?(:avatar_url)
   end
 end
 ```
