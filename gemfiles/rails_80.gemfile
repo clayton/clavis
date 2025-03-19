@@ -8,6 +8,7 @@ gem "debug"
 gem "puma"
 gem "rails", "~> 8.0.0"
 gem "sqlite3", "~> 2.1"
+gem "bcrypt"
 
 group :development, :test do
   gem "generator_spec"
