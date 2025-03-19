@@ -44,57 +44,32 @@ end
 # Helper to fix bootsnap issues and other dependencies in the Rails app
 def fix_bootsnap_issue
   boot_rb_path = "config/boot.rb"
-  if File.exist?(boot_rb_path)
-    content = File.read(boot_rb_path)
-    if content.include?("bootsnap/setup") && !system("bundle list | grep bootsnap")
-      puts "Fixing bootsnap issue..."
+  return unless File.exist?(boot_rb_path)
 
-      # Option 1: Add bootsnap to Gemfile
-      unless File.read("Gemfile").include?("bootsnap")
-        puts "Adding bootsnap to Gemfile..."
-        File.open("Gemfile", "a") do |f|
-          f.puts "\n# Reduces boot times through caching; required in config/boot.rb"
-          f.puts "gem \"bootsnap\", require: false"
-        end
-        system("bundle install")
-      end
+  content = File.read(boot_rb_path)
+  return unless content.include?("bootsnap/setup") && !system("bundle list | grep bootsnap")
 
-      # Option 2 (fallback): Comment out bootsnap line in boot.rb
-      unless system("bundle list | grep bootsnap")
-        puts "Commenting out bootsnap in boot.rb..."
-        modified_content = content.gsub(
-          'require "bootsnap/setup"',
-          '# require "bootsnap/setup" # Commented out to avoid dependency issues'
-        )
-        File.write(boot_rb_path, modified_content)
-      end
+  puts "Fixing bootsnap issue..."
+
+  # Option 1: Add bootsnap to Gemfile
+  unless File.read("Gemfile").include?("bootsnap")
+    puts "Adding bootsnap to Gemfile..."
+    File.open("Gemfile", "a") do |f|
+      f.puts "\n# Reduces boot times through caching; required in config/boot.rb"
+      f.puts "gem \"bootsnap\", require: false"
     end
+    system("bundle install")
   end
 
-  # Ensure bcrypt is installed - critical for has_secure_password
-  ensure_bcrypt_installed
-end
+  # Option 2 (fallback): Comment out bootsnap line in boot.rb
+  return if system("bundle list | grep bootsnap")
 
-# Helper to ensure bcrypt is correctly installed
-def ensure_bcrypt_installed
-  return if File.read("Gemfile").include?("bcrypt")
-
-  puts "Adding bcrypt to Gemfile..."
-  File.open("Gemfile", "a") do |f|
-    f.puts "\n# Use Active Model has_secure_password"
-    f.puts "gem \"bcrypt\", \"~> 3.1.7\""
-  end
-
-  puts "Installing bcrypt dependency..."
-  system("bundle install")
-
-  # Verify bcrypt can be loaded
-  return if system("bundle exec ruby -e 'require \"bcrypt\"'")
-
-  puts "Error: Failed to load bcrypt after installation"
-  puts "Attempting to install bcrypt directly..."
-  system("gem install bcrypt -v '~> 3.1.7'")
-  system("bundle install")
+  puts "Commenting out bootsnap in boot.rb..."
+  modified_content = content.gsub(
+    'require "bootsnap/setup"',
+    '# require "bootsnap/setup" # Commented out to avoid dependency issues'
+  )
+  File.write(boot_rb_path, modified_content)
 end
 
 # Helper to test loading the clavis gem
@@ -120,10 +95,6 @@ def update_user_model(rails_app_dir)
         )
         File.write(user_model_path, updated_content)
       end
-
-      # Verify bcrypt is available
-      puts "Verifying bcrypt is available for User model..."
-      system("bundle exec ruby -e 'require \"bcrypt\"; puts \"bcrypt loaded successfully\"'")
     end
   end
 end
@@ -184,6 +155,15 @@ namespace :test do
       end
     end
 
+    # Add bcrypt explicitly - CRITICAL for has_secure_password in the test app
+    unless gemfile_content.include?("gem \"bcrypt\"")
+      puts "Adding bcrypt directly to Gemfile..."
+      File.open(gemfile_path, "a") do |f|
+        f.puts "\n# Use Active Model has_secure_password"
+        f.puts "gem \"bcrypt\", \"~> 3.1.7\""
+      end
+    end
+
     Dir.chdir(rails_app_dir) do
       # Install dependencies
       puts "Installing dependencies in rails-app..."
@@ -191,10 +171,6 @@ namespace :test do
         puts "Error: Failed to install dependencies in rails-app"
         exit 1
       end
-
-      # Fix bootsnap issue and ensure bcrypt is installed
-      fix_bootsnap_issue
-      ensure_bcrypt_installed
 
       # Test loading the gem
       unless test_clavis_loading(rails_app_dir)
@@ -229,7 +205,7 @@ task all_tests: [:spec, "test:rails", "test:real_generator"]
 # Helper to set up rails app authentication
 def setup_rails_authentication(rails_app_dir, gemfile_content)
   Dir.chdir(rails_app_dir) do
-    # Add bcrypt first to ensure it's available
+    # Add bcrypt first to ensure it's available for has_secure_password
     unless gemfile_content.include?("gem \"bcrypt\"")
       puts "Adding bcrypt to Gemfile..."
       File.open("Gemfile", "a") do |f|
@@ -238,14 +214,6 @@ def setup_rails_authentication(rails_app_dir, gemfile_content)
       end
       puts "Installing bcrypt..."
       system("bundle install")
-
-      # Verify bcrypt installation
-      unless system("bundle exec ruby -e 'require \"bcrypt\"; puts \"bcrypt installed successfully\"'")
-        puts "Warning: bcrypt installation verification failed"
-        puts "Attempting to install bcrypt directly..."
-        system("gem install bcrypt -v '~> 3.1.7'")
-        system("bundle install")
-      end
     end
 
     # Generate authentication with User model
