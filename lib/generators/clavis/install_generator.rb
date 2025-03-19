@@ -86,10 +86,15 @@ module Clavis
 
         # Only add the route if it doesn't already exist
         if routes_content.include?("mount Clavis::Engine")
-          say "Clavis::Engine is already mounted, skipping route addition."
+          say_status :skip, "Clavis::Engine is already mounted, skipping route addition.", :yellow
         else
           route "mount Clavis::Engine => '/auth'"
         end
+      end
+
+      def create_user_method
+        # Generate the user method concern
+        generate "clavis:user_method"
       end
 
       def show_post_install_message
@@ -106,13 +111,15 @@ module Clavis
 
         steps << "Configure your providers in config/initializers/clavis.rb"
         steps << "Run migrations: rails db:migrate"
-        steps << "Add find_or_create_from_clavis method to your User model:\n   rails generate clavis:user_method"
         steps << "Add OAuth buttons to your views:\n   <%= clavis_oauth_button :google %>"
 
         # Output numbered steps
         steps.each_with_index do |step, index|
           say "#{index + 1}. #{step}"
         end
+
+        say "\nClavis has configured your User model with OAuth support via the ClavisUserMethods concern."
+        say "You can customize the OAuth user creation logic by editing app/models/concerns/clavis_user_methods.rb"
 
         say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
       end
