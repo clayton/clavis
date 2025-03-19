@@ -15,9 +15,7 @@ gem "rubocop", "~> 1.21"
 
 gem "ostruct", "~> 0.6.0"
 
-# Ruby 3.4+ compatibility
-gem "bigdecimal"
-gem "mutex_m"
+gem "bcrypt" # for rails 8 authentication in our dummy app
 
 # Development dependencies moved from gemspec
 gem "capybara", "~> 3.39", group: %i[development test]
