@@ -106,6 +106,7 @@ task :environment do
 end
 
 # Task to run Rails-dependent tests
+# rubocop:disable Metrics/BlockLength
 namespace :test do
   desc "Run Rails controller tests"
   task controllers: :environment do
@@ -197,6 +198,7 @@ namespace :test do
     end
   end
 end
+# rubocop:enable Metrics/BlockLength
 
 # Task to run all tests
 desc "Run all tests including Rails controller tests and integration tests"
