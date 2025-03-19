@@ -13,7 +13,7 @@ Version 0.2.0 brings several important fixes and improvements to the Clavis gem,
 2. **View Helper Integration**:
    - Improved automatic inclusion of view helpers in Rails applications
    - Fixed issues with helper availability in `ApplicationHelper`
-   - View helpers like `oauth_button` should now work out of the box
+   - View helpers like `clavis_oauth_button` should now work out of the box
 
 3. **Installation Generator Improvements**:
    - Updated the `clavis:install` generator to properly handle the creation of OAuth identity tables

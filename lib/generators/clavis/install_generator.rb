@@ -48,7 +48,7 @@ module Clavis
         say "   class User < ApplicationRecord"
         say "     include Clavis::Models::OauthAuthenticatable"
         say "   end"
-        say "4. Add OAuth buttons to your views: <%= oauth_button :google %>"
+        say "4. Add OAuth buttons to your views: <%= clavis_oauth_button :google %>"
         say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
       end
 

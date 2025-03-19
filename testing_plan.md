@@ -515,10 +515,10 @@ Test that all user-provided data is properly escaped in views:
 ```ruby
 # spec/view_helpers_spec.rb
 RSpec.describe Clavis::ViewHelpers do
-  describe "#oauth_button" do
+  describe "#clavis_oauth_button" do
     it "properly escapes button text" do
       # Test with potential XSS string
-      result = helper.oauth_button(:google, text: "<script>alert('XSS')</script>")
+      result = helper.clavis_oauth_button(:google, text: "<script>alert('XSS')</script>")
       
       # Verify it's escaped
       expect(result).not_to include("<script>")

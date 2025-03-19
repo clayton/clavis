@@ -255,7 +255,7 @@ Clavis will be a Ruby gem that provides an easy-to-use implementation of OIDC (O
    # lib/clavis/view_helpers.rb
    module Clavis
      module ViewHelpers
-       def oauth_button(provider, options = {})
+       def clavis_oauth_button(provider, options = {})
          # Validate provider configuration
          Clavis.configuration.validate_provider!(provider)
          
@@ -324,7 +324,7 @@ Clavis will be a Ruby gem that provides an easy-to-use implementation of OIDC (O
          say "\nClavis has been installed! Next steps:"
          say "1. Run migrations: rails db:migrate"
          say "2. Configure your providers in config/initializers/clavis.rb"
-         say "3. Add provider buttons to your views: <%= oauth_button :google %>"
+         say "3. Add provider buttons to your views: <%= clavis_oauth_button :google %>"
          say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
        end
      end
@@ -493,9 +493,9 @@ end
 
 <div class="oauth-providers">
   <p>Or sign in with:</p>
-  <%= oauth_button :google %>
-  <%= oauth_button :github %>
-  <%= oauth_button :apple %>
+  <%= clavis_oauth_button :google %>
+  <%= clavis_oauth_button :github %>
+  <%= clavis_oauth_button :apple %>
 </div>
 ```
 

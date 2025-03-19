@@ -94,8 +94,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Namespaced view helper methods to prevent conflicts with Rails form helpers
-  - `oauth_button` -> `clavis_oauth_button` (with legacy alias)
-  - `provider_svg` -> `clavis_provider_svg` (with legacy alias)
+  - `oauth_button` -> `clavis_oauth_button`
+  - `provider_svg` -> `clavis_provider_svg`
 - Made view helper inclusion configurable through `config.view_helpers_auto_include` option
 - Updated documentation to reflect the new helper naming and inclusion options
 - Engine configuration now defaults to automatically include view helpers

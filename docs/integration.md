@@ -136,15 +136,15 @@ This creates:
 
 <div class="oauth-buttons">
   <p>Or sign in with:</p>
-  <%= oauth_button :google %>
-  <%= oauth_button :github %>
+  <%= clavis_oauth_button :google %>
+  <%= clavis_oauth_button :github %>
 </div>
 ```
 
 ### Customize button appearance:
 
 ```erb
-<%= oauth_button :google, text: "Continue with Google", class: "my-custom-button" %>
+<%= clavis_oauth_button :google, text: "Continue with Google", class: "my-custom-button" %>
 ```
 
 ## Route Configuration
@@ -223,7 +223,7 @@ end
 
 ### View Helper Issues
 
-If you're having trouble with the `oauth_button` helper, ensure your application helper includes Clavis's view helpers:
+If you're having trouble with the `clavis_oauth_button` helper, ensure your application helper includes Clavis's view helpers:
 
 ```ruby
 # app/helpers/application_helper.rb

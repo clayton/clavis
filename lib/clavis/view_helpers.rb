@@ -36,9 +36,6 @@ module Clavis
       )
     end
 
-    # Backwards compatibility alias for existing code
-    alias oauth_button clavis_oauth_button
-
     private
 
     def clavis_oauth_button_content(_provider, options)
@@ -57,10 +54,22 @@ module Clavis
     end
 
     def clavis_auth_path(provider)
-      Rails.application.routes.url_helpers.send(:"auth_#{provider}_path")
-    rescue NoMethodError
-      # Fallback for custom providers
-      Rails.application.routes.url_helpers.send(:auth_path, provider: provider)
+      # Try provider-specific named route first
+      begin
+        return Rails.application.routes.url_helpers.send(:"auth_#{provider}_path")
+      rescue NoMethodError
+        # Provider-specific route doesn't exist, try the generic route
+      end
+
+      # Try dynamic provider route
+      begin
+        return Rails.application.routes.url_helpers.send(:auth_path, provider: provider)
+      rescue NoMethodError
+        # Generic route doesn't exist, fallback to direct URL
+      end
+
+      # Fallback to a direct URL if neither route is available
+      "/auth/#{provider}"
     end
 
     def clavis_default_button_text(provider)

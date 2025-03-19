@@ -43,7 +43,7 @@ end
 
 Then add an OAuth login button to your view:
 ```erb
-<%= link_to "Sign in with GitHub", auth_path(:github), class: "btn" %>
+<%= clavis_oauth_button :github %>
 ```
 
 That's it! You now have "Sign in with GitHub" functionality in your Rails app.
@@ -138,8 +138,8 @@ The generator creates migrations for:
    ```
 4. Add OAuth buttons to your login page:
    ```erb
-   <%= link_to "Sign in with GitHub", auth_path(:github), class: "oauth-button github" %>
-   <%= link_to "Sign in with Google", auth_path(:google), class: "oauth-button google" %>
+   <%= clavis_oauth_button :github, class: "oauth-button github" %>
+   <%= clavis_oauth_button :google, class: "oauth-button google" %>
    ```
 
 ## Controller Integration

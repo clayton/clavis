@@ -2,6 +2,8 @@
 
 module Clavis
   class Configuration
+    SUPPORTED_PROVIDERS = %i[google github facebook apple microsoft].freeze
+
     attr_accessor :providers, :default_callback_path, :default_scopes, :verbose_logging, :claims_processor,
                   :encrypt_tokens, :encryption_key, :use_rails_credentials, :parameter_filter_enabled,
                   :allowed_redirect_hosts, :exact_redirect_uri_matching, :allow_localhost_in_development,
@@ -50,6 +52,18 @@ module Clavis
       @csrf_protection_enabled = true
       @valid_redirect_schemes = %w[http https]
       @view_helpers_auto_include = true
+    end
+
+    # Returns the list of supported providers
+    # @return [Array<Symbol>] List of supported provider symbols
+    def self.supported_providers
+      SUPPORTED_PROVIDERS
+    end
+
+    # Returns the list of configured providers
+    # @return [Array<Symbol>] List of configured provider symbols
+    def configured_providers
+      providers.keys
     end
 
     def post_initialize

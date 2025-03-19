@@ -39,7 +39,7 @@ end
 Add a button to your view:
 
 ```erb
-<%= link_to "Sign in with GitHub", auth_path(:github), class: "button" %>
+<%= clavis_oauth_button :github %>
 ```
 
 ## Table of Contents
