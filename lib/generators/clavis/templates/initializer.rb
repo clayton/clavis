@@ -7,6 +7,8 @@ Clavis.configure do |config|
     <%= provider %>: {
       client_id: ENV["<%= provider.upcase %>_CLIENT_ID"] || Rails.application.credentials.dig(:<%= provider %>, :client_id),
       client_secret: ENV["<%= provider.upcase %>_CLIENT_SECRET"] || Rails.application.credentials.dig(:<%= provider %>, :client_secret),
+      # IMPORTANT: This exact URI must be registered in the <%= provider.capitalize %> developer console/dashboard
+      # For example, in Google Cloud Console: APIs & Services > Credentials > OAuth 2.0 Client IDs > Authorized redirect URIs
       redirect_uri: "http://localhost:3000/auth/<%= provider %>/callback" # Change this in production
     },
 <% end %>

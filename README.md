@@ -33,9 +33,15 @@ rails db:migrate
 # The generator created this file for you - just update with your credentials
 Clavis.configure do |config|
   config.providers = {
+    google: {
+      client_id: ENV['GOOGLE_CLIENT_ID'],
+      client_secret: ENV['GOOGLE_CLIENT_SECRET'],
+      redirect_uri: 'https://your-app.com/auth/google/callback'
+    },
     github: {
-      client_id: ENV["GITHUB_CLIENT_ID"],
-      client_secret: ENV["GITHUB_CLIENT_SECRET"]
+      client_id: ENV['GITHUB_CLIENT_ID'],
+      client_secret: ENV['GITHUB_CLIENT_SECRET'],
+      redirect_uri: 'http://localhost:3000/auth/github/callback'
     }
   }
 end
@@ -118,7 +124,28 @@ Clavis.configure do |config|
 end
 ```
 
-> ⚠️ **Important**: Always use the complete callback URI including the provider path (`/auth/:provider/callback`).
+> ⚠️ **Important**: The `redirect_uri` must match EXACTLY what you've registered in the provider's developer console. If there's a mismatch, you'll get errors like "redirect_uri_mismatch". Pay attention to the protocol (http/https), domain, port, and path - all must match precisely.
+
+## Setting Up OAuth Redirect URIs in Provider Consoles
+
+When setting up OAuth, correctly configuring redirect URIs in both your app and the provider's developer console is crucial:
+
+### Google
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Navigate to "APIs & Services" > "Credentials"
+3. Create or edit an OAuth 2.0 Client ID
+4. Under "Authorized redirect URIs" add exactly the same URI as in your Clavis config:
+   - For development: `http://localhost:3000/auth/google/callback`
+   - For production: `https://your-app.com/auth/google/callback`
+
+### GitHub
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Navigate to "OAuth Apps" and create or edit your app
+3. In the "Authorization callback URL" field, add exactly the same URI as in your Clavis config
+
+### Common Errors
+- **Error 400: redirect_uri_mismatch** - This means the URI in your code doesn't match what's registered in the provider's console
+- **Solution**: Ensure both URIs match exactly, including protocol (http/https), domain, port, and full path
 
 ## Database Setup
 
@@ -213,6 +240,27 @@ module OauthHelper
   include Clavis::ViewHelpers
 end
 ```
+
+### Importing Stylesheets
+
+The Clavis install generator will attempt to automatically add the required stylesheets to your application. If you need to manually include them:
+
+For Sprockets (asset pipeline):
+```css
+/* app/assets/stylesheets/application.css */
+/*
+ *= require clavis
+ *= require_self
+ */
+```
+
+For Webpacker/Importmap:
+```scss
+/* app/assets/stylesheets/application.scss */
+@import 'clavis';
+```
+
+### Using Buttons
 
 Use in views:
 

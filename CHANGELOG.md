@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Fixed HTML escaping issue in `clavis_oauth_button` helper so it works properly with `<%= %>` without requiring `<%== %>`
+- Fixed routing for OAuth providers by respecting configured callback paths instead of hardcoding `/auth/`
+- Improved button rendering to handle different engine mount points and configurations
+- Improved documentation to clarify how OAuth buttons and routes work with the engine
+
 ## [0.6.8] - 2024-03-20
 
 ### Fixed

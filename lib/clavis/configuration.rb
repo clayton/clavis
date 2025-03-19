@@ -72,19 +72,57 @@ module Clavis
     end
 
     def provider_configured?(provider_name)
-      return false unless providers&.key?(provider_name.to_sym)
+      Rails.logger.debug "CLAVIS DEBUG: provider_configured? check for provider: #{provider_name}"
+      provider_sym = provider_name.to_sym
+      Rails.logger.debug "CLAVIS DEBUG: Available providers: #{providers.keys.inspect}"
 
-      provider_config = providers[provider_name.to_sym]
-      client_id = provider_config[:client_id]
-      client_secret = provider_config[:client_secret]
+      # Check if the provider is defined in the configuration
+      unless providers&.key?(provider_sym)
+        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is not defined in the configuration"
+        Clavis::Logging.log_error("Provider '#{provider_name}' is not defined in the configuration")
+        return false
+      end
 
-      !client_id.nil? && !client_id.empty? && !client_secret.nil? && !client_secret.empty?
+      provider_config = providers[provider_sym]
+      Rails.logger.debug "CLAVIS DEBUG: Provider config: #{provider_config.inspect}"
+
+      # Check for required credentials
+      if provider_config[:client_id].nil? || provider_config[:client_id].empty?
+        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is missing client_id"
+        Clavis::Logging.log_error("Provider '#{provider_name}' is missing client_id")
+        return false
+      end
+
+      if provider_config[:client_secret].nil? || provider_config[:client_secret].empty?
+        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is missing client_secret"
+        Clavis::Logging.log_error("Provider '#{provider_name}' is missing client_secret")
+        return false
+      end
+
+      # Check for redirect_uri if required by provider
+      if %i[google github facebook microsoft].include?(provider_sym) &&
+         (provider_config[:redirect_uri].nil? || provider_config[:redirect_uri].empty?)
+        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is missing redirect_uri"
+        Clavis::Logging.log_error("Provider '#{provider_name}' is missing redirect_uri")
+        return false
+      end
+
+      # All checks passed
+      Rails.logger.debug "CLAVIS DEBUG: Provider '#{provider_name}' is properly configured"
+      true
     end
 
     def validate_provider!(provider_name)
-      return if provider_configured?(provider_name)
+      Rails.logger.debug "CLAVIS DEBUG: validate_provider! called for #{provider_name}"
+      result = provider_configured?(provider_name)
+      Rails.logger.debug "CLAVIS DEBUG: provider_configured? returned #{result.inspect}"
 
-      raise Clavis::ProviderNotConfigured, provider_name
+      unless result
+        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is not configured properly"
+        raise Clavis::ProviderNotConfigured, provider_name
+      end
+
+      Rails.logger.debug "CLAVIS DEBUG: Provider '#{provider_name}' validation successful"
     end
 
     def provider_config(provider_name)

@@ -88,6 +88,7 @@ task :environment do
 end
 
 # Task to run Rails-dependent tests
+# rubocop:disable Metrics/BlockLength
 namespace :test do
   desc "Run Rails controller tests"
   task controllers: :environment do
@@ -160,6 +161,12 @@ namespace :test do
       unless safe_rails_command(rails_app_dir, "bin/rails db:migrate RAILS_ENV=development") &&
              safe_rails_command(rails_app_dir, "bin/rails db:migrate RAILS_ENV=test")
         puts "Error: Failed to run migrations after generator"
+        exit 1
+      end
+
+      puts "Checking routes"
+      unless safe_rails_command(rails_app_dir, "bin/rails routes")
+        puts "Error: Failed to check routes"
         exit 1
       end
 
@@ -267,7 +274,7 @@ task :bootstrap_rails_app do
     puts "Rails application created successfully with authentication!"
   end
 end
-
+# rubocop:enable Metrics/BlockLength
 # Tasks for the dummy Rails app
 namespace :dummy do
   desc "Prepare the dummy Rails app for testing"

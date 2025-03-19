@@ -1,13 +1,25 @@
 # frozen_string_literal: true
 
 module Clavis
-  class AuthController < ::ApplicationController
+  # AuthController directly inherits from ActionController::Base to avoid inheriting
+  # host application's authentication requirements or before_actions that could
+  # interfere with the OAuth flow
+  class AuthController < ::ActionController::Base
     include Clavis::Controllers::Concerns::Authentication
 
-    before_action :check_provider_configured
+    # Add basic controller setup
+    protect_from_forgery with: :exception
+
+    # Allow access to main_app routes
+    helper Rails.application.routes.url_helpers if defined?(Rails)
+
+    # Skip CSRF protection for OAuth callback endpoints since they come from external redirects
+    skip_before_action :verify_authenticity_token, only: [:callback]
 
     def authorize
+      Rails.logger.debug "CLAVIS DEBUG: AuthController#authorize called with params: #{params.inspect}"
       oauth_authorize
+      Rails.logger.debug "CLAVIS DEBUG: AuthController#authorize completed"
     end
 
     def callback
@@ -38,25 +50,12 @@ module Clavis
                           "Authentication failed: #{e.message}"
                         end
 
-        redirect_to main_app.root_path
+        # Safe redirect to root_path or fallback to "/"
+        safe_redirect
       end
     end
 
     private
-
-    def check_provider_configured
-      provider = params[:provider]
-
-      # Skip for testing or when provider is nil
-      return if request.path.start_with?("/test") || provider.nil?
-
-      return if Clavis.configuration.provider_configured?(provider)
-
-      Clavis::Logging.log_error("Provider '#{provider}' is not configured")
-      flash[:alert] =
-        "Authentication provider '#{provider}' is not configured. Please check your Clavis configuration."
-      redirect_to main_app.root_path
-    end
 
     def find_or_create_user_from_oauth(auth_hash)
       if defined?(User) && User.respond_to?(:find_for_oauth)
@@ -77,7 +76,35 @@ module Clavis
     end
 
     def after_authentication_url
-      session.delete(:return_to_after_authenticating) || main_app.root_path
+      return session.delete(:return_to_after_authenticating) if session[:return_to_after_authenticating].present?
+
+      # Try to get main_app's root_path, fall back to "/"
+      begin
+        main_app.respond_to?(:root_path) ? main_app.root_path : "/"
+      rescue StandardError
+        "/"
+      end
+    end
+
+    def safe_redirect(path = nil)
+      # Try default paths in order of preference
+      fallback_paths = [
+        -> { main_app.root_path if main_app.respond_to?(:root_path) },
+        -> { main_app.respond_to?(:login_path) ? main_app.login_path : nil },
+        -> { "/" } # Final fallback is always root
+      ]
+
+      # Use provided path or find first working fallback
+      target_path = path || fallback_paths.lazy.map(&:call).find(&:present?)
+
+      # Perform the redirect with exception handling
+      begin
+        redirect_to target_path
+      rescue StandardError => e
+        # Log the error and redirect to root as ultimate fallback
+        Clavis::Logging.log_error("Redirect error: #{e.message}. Falling back to '/'")
+        redirect_to "/"
+      end
     end
   end
 end

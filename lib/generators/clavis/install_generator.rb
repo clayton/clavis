@@ -26,6 +26,50 @@ module Clavis
         template "initializer.rb", "config/initializers/clavis.rb"
       end
 
+      def add_stylesheets
+        # Create the vendor directory if it doesn't exist
+        vendor_css_dir = Rails.root.join("vendor", "assets", "stylesheets")
+        FileUtils.mkdir_p(vendor_css_dir) unless File.directory?(vendor_css_dir)
+
+        # Copy the CSS template to the vendor directory
+        template "clavis.css", "vendor/assets/stylesheets/clavis.css"
+
+        # Create custom styles file in app/assets
+        create_file "app/assets/stylesheets/clavis_custom.css", "/* Add your custom Clavis styles here */"
+
+        # For Rails 7+ with Propshaft
+        if File.exist?(Rails.root.join("app", "assets", "stylesheets", "application.css"))
+          app_css_content = File.read(Rails.root.join("app", "assets", "stylesheets", "application.css"))
+          if app_css_content.include?("Propshaft")
+            # Create a separate file for Propshaft
+            propshaft_css_path = Rails.root.join("app", "assets", "stylesheets", "clavis_styles.css")
+            create_file propshaft_css_path, File.read(File.expand_path("clavis.css", source_paths.first))
+            say_status :create, "app/assets/stylesheets/clavis_styles.css for Propshaft", :green
+            @provide_css_instructions = true
+            return
+          end
+        end
+
+        # Different strategies for different asset pipeline setups
+        if File.exist?(Rails.root.join("app", "assets", "stylesheets", "application.scss"))
+          append_to_file "app/assets/stylesheets/application.scss", "\n@import 'clavis';\n"
+          say_status :insert, "clavis import in application.scss", :green
+        elsif File.exist?(Rails.root.join("app", "assets", "stylesheets", "application.css"))
+          inject_into_file "app/assets/stylesheets/application.css", " *= require clavis\n", before: "*/",
+                                                                                             verbose: false
+          say_status :insert, "clavis require in application.css", :green
+        elsif File.exist?(Rails.root.join("app", "assets", "stylesheets", "application.css.scss"))
+          append_to_file "app/assets/stylesheets/application.css.scss", "\n@import 'clavis';\n"
+          say_status :insert, "clavis import in application.css.scss", :green
+        else
+          say_status :warn, "Could not find main application CSS file", :yellow
+          create_file "app/assets/stylesheets/clavis_styles.css",
+                      File.read(File.expand_path("clavis.css", source_paths.first))
+          say_status :create, "app/assets/stylesheets/clavis_styles.css as fallback", :green
+          @provide_css_instructions = true
+        end
+      end
+
       def create_migration
         # First, create the OAuth identities table migration if it doesn't exist
         create_identities_migration
@@ -37,18 +81,41 @@ module Clavis
       end
 
       def mount_engine
-        route "mount Clavis::Engine => '/auth'"
+        # Check if the route already exists in the routes file
+        routes_content = File.read(Rails.root.join("config/routes.rb"))
+
+        # Only add the route if it doesn't already exist
+        if routes_content.include?("mount Clavis::Engine")
+          say "Clavis::Engine is already mounted, skipping route addition."
+        else
+          route "mount Clavis::Engine => '/auth'"
+        end
       end
 
       def show_post_install_message
-        say "\nClavis has been installed! Next steps:"
-        say "1. Configure your providers in config/initializers/clavis.rb"
-        say "2. Run migrations: rails db:migrate"
-        say "3. Include the OauthAuthenticatable module in your User model:"
-        say "   class User < ApplicationRecord"
-        say "     include Clavis::Models::OauthAuthenticatable"
-        say "   end"
-        say "4. Add OAuth buttons to your views: <%= clavis_oauth_button :google %>"
+        say "\nClavis has been installed successfully!"
+
+        # Next steps
+        say "\nNext steps:"
+
+        # Build the steps list with CSS at position 4
+        steps = []
+
+        steps << "Configure your providers in config/initializers/clavis.rb"
+        steps << "Run migrations: rails db:migrate"
+        steps << "Include the OauthAuthenticatable module in your User model:\n   class User < ApplicationRecord\n     include Clavis::Models::OauthAuthenticatable\n   end"
+
+        if @provide_css_instructions
+          steps << "Include the Clavis styles in your layout:\n   <%= stylesheet_link_tag 'clavis_styles' %>"
+        end
+
+        steps << "Add OAuth buttons to your views:\n   <%= clavis_oauth_button :google %>"
+
+        # Output numbered steps
+        steps.each_with_index do |step, index|
+          say "#{index + 1}. #{step}"
+        end
+
         say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
       end
 

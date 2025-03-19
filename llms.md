@@ -26,6 +26,9 @@ Clavis.configure do |config|
       client_secret: ENV["GITHUB_CLIENT_SECRET"]
     }
   }
+  
+  # Optional: Customize the path (default is '/auth/:provider/callback')
+  # config.default_callback_path = '/oauth/:provider/callback'
 end
 ```
 
@@ -41,6 +44,13 @@ Add a button to your view:
 ```erb
 <%= clavis_oauth_button :github %>
 ```
+
+### Important Notes
+
+1. Use the standard ERB syntax with `<%= %>` for OAuth buttons - the helper returns html_safe content
+2. The gem automatically handles route setup when mounted at `/auth` - no additional route configuration needed
+3. Always use the complete callback URI in provider configuration (e.g., `https://your-app.com/auth/github/callback`)
+4. If you customize the mount path, make sure to update the `default_callback_path` configuration accordingly
 
 ## Table of Contents
 
@@ -86,6 +96,47 @@ https://your-domain.com/auth/:provider/callback
 ```
 
 Common mistake: Using just the domain without the full path.
+
+### Route Structure
+
+The Clavis engine is mounted at `/auth` by default, which creates these routes:
+
+```
+/auth/google                - Start Google OAuth flow
+/auth/google/callback       - Handle Google OAuth callback
+/auth/:provider             - Generic provider route
+/auth/:provider/callback    - Generic callback route
+```
+
+These routes are automatically registered when you mount the engine:
+
+```ruby
+# config/routes.rb (added by generator)
+mount Clavis::Engine => "/auth"
+```
+
+#### Customizing the Path
+
+You can customize the path in two ways:
+
+1. **Change the engine mount point**:
+```ruby
+# config/routes.rb
+mount Clavis::Engine => "/oauth"
+```
+
+2. **Update the callback path configuration**:
+```ruby
+# config/initializers/clavis.rb
+Clavis.configure do |config|
+  # This should match your engine mount point
+  config.default_callback_path = "/oauth/:provider/callback"
+end
+```
+
+When customizing paths, make sure that:
+1. The provider configuration's redirect URIs match your custom paths
+2. Both the engine mount point and the `default_callback_path` are updated consistently
 
 ### OAuth Flow Implementation
 
@@ -246,20 +297,22 @@ module OauthHelper
 end
 ```
 
-### Customizing User Creation
+### Customizing Button Display
 
-```ruby
-class User < ApplicationRecord
-  include Clavis::Models::OauthAuthenticatable
-  
-  def self.find_for_oauth(auth_hash)
-    super do |user, auth|
-      user.name = auth[:info][:name]
-      user.email = auth[:info][:email]
-    end
-  end
-end
+Clavis OAuth buttons can be customized with several options:
+
+```erb
+<!-- Custom text -->
+<%= clavis_oauth_button :google, text: "Continue with Google" %>
+
+<!-- Custom CSS class -->
+<%= clavis_oauth_button :github, class: "my-custom-button" %>
+
+<!-- Custom HTML attributes -->
+<%= clavis_oauth_button :apple, html: { data: { turbo: false } } %>
 ```
+
+The buttons are rendered with HTML-safe content, so you can use the standard ERB output tag `<%= %>` without extra escaping.
 
 ## Customization Guide
 

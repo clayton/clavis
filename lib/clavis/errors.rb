@@ -35,8 +35,27 @@ module Clavis
   end
 
   class ProviderNotConfigured < ProviderError
-    def initialize(provider)
-      super("Provider not configured: #{provider}")
+    def initialize(provider_or_message)
+      if provider_or_message.is_a?(String) && provider_or_message.include?("not configured")
+        # Already a detailed message
+        super
+      else
+        # Just a provider name, create a detailed message
+        provider = provider_or_message.to_s
+        message = "Provider '#{provider}' is not properly configured. Please check your configuration in config/initializers/clavis.rb.\n" \
+                  "Required fields for #{provider} provider: client_id, client_secret, and redirect_uri.\n" \
+                  "Example configuration:\n" \
+                  "Clavis.configure do |config|\n  " \
+                  "config.providers = {\n    " \
+                  "#{provider}: {\n      " \
+                  "client_id: 'your_client_id',\n      " \
+                  "client_secret: 'your_client_secret',\n      " \
+                  "redirect_uri: 'https://your-app.com/auth/#{provider}/callback'\n    " \
+                  "}\n  " \
+                  "}\n" \
+                  "end"
+        super(message)
+      end
     end
   end
 

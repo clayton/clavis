@@ -26,6 +26,17 @@ module Clavis
       # Add Clavis assets to the asset pipeline
       app.config.assets.paths << root.join("app", "assets", "stylesheets") if app.config.respond_to?(:assets)
       app.config.assets.paths << root.join("app", "assets", "javascripts") if app.config.respond_to?(:assets)
+
+      # Explicitly precompile clavis assets if precompile array is available
+      if app.config.respond_to?(:assets) && app.config.assets.respond_to?(:precompile)
+        app.config.assets.precompile += %w[clavis.css clavis.js]
+      end
+
+      # For Rails 7+ with propshaft or jsbundling
+      if defined?(Propshaft) || defined?(Jsbundling)
+        app.config.assets.precompile << "clavis.css" if app.config.respond_to?(:assets)
+        app.config.importmap.pin "clavis", to: "clavis" if app.config.respond_to?(:importmap)
+      end
     end
 
     # Add an initializer to set up application routes when the engine is mounted

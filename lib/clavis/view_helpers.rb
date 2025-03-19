@@ -26,6 +26,12 @@ module Clavis
         html: {}
       }.merge(options)
 
+      # More aggressive Turbo disabling - ensure it works in all environments
+      options[:html] ||= {}
+      options[:html]["data-turbo"] = "false"
+      options[:html]["data-turbo-frame"] = "_top"
+      options[:html]["rel"] = "nofollow"
+
       # Generate the button
       clavis_link_to(
         clavis_oauth_button_content(provider, options),
@@ -33,7 +39,7 @@ module Clavis
         method: options[:method],
         class: options[:class],
         **options[:html]
-      )
+      ).html_safe
     end
 
     private
@@ -48,28 +54,37 @@ module Clavis
       end
 
       # Add text
-      content += clavis_content_tag(:span, options[:text])
+      content += clavis_content_tag(:span, options[:text], class: "clavis-oauth-button__text")
 
-      content.html_safe
+      content
     end
 
     def clavis_auth_path(provider)
-      # Try provider-specific named route first
-      begin
-        return Rails.application.routes.url_helpers.send(:"auth_#{provider}_path")
-      rescue NoMethodError
-        # Provider-specific route doesn't exist, try the generic route
+      # Determine the base path using multiple strategies for maximum compatibility
+
+      # Strategy 1: Get path from configured callback_path
+      if defined?(Clavis.configuration) && Clavis.configuration.respond_to?(:default_callback_path)
+        base_path = Clavis.configuration.default_callback_path.to_s
+        # Extract base path before the first variable component
+        # Example: '/auth/:provider/callback' becomes '/auth/'
+        if base_path.include?(":")
+          base_path = base_path.split(":").first
+        else
+          # If there's no variable, extract the directory part of the path
+          base_path = File.dirname(base_path)
+          base_path = "/" if base_path == "."
+        end
+      else
+        # Default fallback if no configuration is available
+        base_path = "/auth"
       end
 
-      # Try dynamic provider route
-      begin
-        return Rails.application.routes.url_helpers.send(:auth_path, provider: provider)
-      rescue NoMethodError
-        # Generic route doesn't exist, fallback to direct URL
-      end
+      # Ensure the base path has a leading slash but no trailing slash
+      base_path = "/#{base_path}" unless base_path.start_with?("/")
+      base_path = base_path.chomp("/")
 
-      # Fallback to a direct URL if neither route is available
-      "/auth/#{provider}"
+      # Return the complete path
+      "#{base_path}/#{provider}"
     end
 
     def clavis_default_button_text(provider)

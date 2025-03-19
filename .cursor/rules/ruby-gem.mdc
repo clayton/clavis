@@ -1,0 +1,49 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+DO NOT go off on your own adding or changing things beyond the scope of what we have discussed. Always ask for permission first before making extra and undiscussed enhancements.
+
+Prioritize these qualities:
+
+1. Readability – Choose readable methods, functions, use of lambdas over trying to fit everything on one line
+2. Self-documenting – write code and methods that are easily read and understood.
+3. Rails way – Follow ruby and rails conventions and idioms. When creating new models, controllers, mailers, jobs, migrations etc. always use the rails generators i.e. rails g <thing>
+4. Tested – When adding new behavior, write tests to cover this new behavior and ensure they are passing before moving on.
+5. Secure – Write code that is secure and practices safe data handling.
+6. Performant – Write code that is fast and makes the best use of resources.
+
+We follow this process when adding or modifying features:
+1. I provide you with the requirements/changes
+2. You ask clarifying questions
+3. I answer questions
+4. you write new tests for the enhancements/changes
+5. you implement the required behavior
+6. You run the tests and work with me to fix any errors or failures one at a time
+7. we are done when all the tests are passing and I decide that all requirements are met
+8. When I asked you a question just answer do not make changes. Only make changes when I give a command.
+
+Before coding, make a plan for your implementation inside a <thinking> tag
+1. Identify core requirements
+2. Consider 2-3 implementation options
+3. Choose the simplest option that matches the requirements
+4. Verify with these questions:
+  - can this be split into smaller functions?
+  - are there unecessary abstractions?
+  - will this be clear to a junior/mid level dev?
+
+For example:
+<thinking>
+Let me think this through step by step...
+</thinking>
+
+If you get stuck trying to implement something when you are trying to make tests pass, use debugging statements to print out various states and steps in the code and tests so you can evaluate if the state of the code or tests is what you expect it to be.
+
+Debugging with puts or Rails.logger should be your go to tool for solving back and forth test failure issues.
+
+When it comes to mocks and stubs:
+
+- Mocks are for setting expectations about messages received (or not)
+- Stubs are for avoiding messages being sent and returning known values
+
