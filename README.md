@@ -85,7 +85,7 @@ Before installing Clavis, note these assumptions:
 Add to your Gemfile:
 
 ```ruby
-gem 'clavis', '~> 0.6.1'
+gem 'clavis', '~> 0.6.2'
 ```
 
 Install and set up:
