@@ -136,11 +136,33 @@ module Clavis
         # Check if the users table exists
         if ActiveRecord::Base.connection.table_exists?(:users)
           migration_number = self.class.next_migration_number("db/migrate")
-          @migration_class_name = "AddOauthToUsers"
-          template(
-            "add_oauth_to_users.rb",
-            "db/migrate/#{migration_number}_add_oauth_to_users.rb"
-          )
+
+          # Create the migration file with direct content rather than ERB template
+          create_file "db/migrate/#{migration_number}_add_oauth_to_users.rb", <<~RUBY
+            # frozen_string_literal: true
+
+            class AddOauthToUsers < ActiveRecord::Migration[#{ActiveRecord::Migration.current_version}]
+              def change
+                # These are OPTIONAL fields for your User model that might be useful for OAuth
+                # Uncomment the ones you'd like to use
+
+                # Cache the avatar URL from OAuth for quicker access
+                # add_column :users, :avatar_url, :string, null: true
+
+                # Track when the user last authenticated via OAuth
+                # add_column :users, :last_oauth_login_at, :datetime, null: true
+            #{"    "}
+                # Track which provider was most recently used
+                # add_column :users, :last_oauth_provider, :string, null: true
+            #{"    "}
+                # Remember if the user is primarily an OAuth user
+                # add_column :users, :oauth_user, :boolean, default: false
+            #{"    "}
+                # Note: All OAuth identity information (tokens, credentials, etc.) is#{" "}
+                # stored in the clavis_oauth_identities table, not directly on the User.
+              end
+            end
+          RUBY
         else
           say "Skipping User table migration because users table doesn't exist."
           say "Run 'rails g model User' first if you want to add OAuth fields to your User model."
