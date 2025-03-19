@@ -41,11 +41,11 @@ module Clavis
         data = JSON.parse(response.body, symbolize_names: true)
 
         {
-          sub: data[:id],
+          id: data[:id],
           name: data[:displayName],
           email: data[:mail] || data[:userPrincipalName],
-          given_name: data[:givenName],
-          family_name: data[:surname]
+          first_name: data[:givenName],
+          last_name: data[:surname]
         }
       end
 

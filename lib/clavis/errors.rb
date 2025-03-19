@@ -40,6 +40,13 @@ module Clavis
     end
   end
 
+  # OAuth errors
+  class OAuthError < Error
+    def initialize(message = "OAuth error")
+      super
+    end
+  end
+
   # Authorization errors
   class AuthorizationError < Error; end
 
@@ -111,6 +118,37 @@ module Clavis
   class ExpiredToken < TokenError
     def initialize
       super("Token has expired")
+    end
+  end
+
+  # Client errors
+  class InvalidClient < TokenError
+    def initialize(message = "Invalid client credentials")
+      super
+    end
+  end
+
+  class UnauthorizedClient < TokenError
+    def initialize(message = "The client is not authorized to use this grant type")
+      super
+    end
+  end
+
+  class UnsupportedGrantType < TokenError
+    def initialize(message = "The grant type is not supported by the authorization server")
+      super
+    end
+  end
+
+  class InvalidScope < TokenError
+    def initialize(message = "The requested scope is invalid or unknown")
+      super
+    end
+  end
+
+  class InsufficientScope < TokenError
+    def initialize(message = "The token does not have the required scopes")
+      super
     end
   end
 
