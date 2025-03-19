@@ -218,11 +218,9 @@ def setup_rails_authentication(rails_app_dir, gemfile_content)
       system("bundle install")
     end
 
-    # Generate authentication with User model
-    puts "Generating authentication with User model..."
-    system("bin/rails generate model User email:string password_digest:string")
-    system("bin/rails generate controller Users new create")
-    system("bin/rails generate controller Sessions new create destroy")
+    # Use the Rails 8 built-in authentication generator
+    puts "Using Rails built-in authentication generator..."
+    system("bin/rails generate authentication")
   end
 end
 
