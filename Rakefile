@@ -41,35 +41,45 @@ def safe_rails_command(rails_app_dir, command)
   end
 end
 
-# Helper to fix bootsnap issues in the Rails app
+# Helper to fix bootsnap issues and other dependencies in the Rails app
 def fix_bootsnap_issue
   boot_rb_path = "config/boot.rb"
-  return unless File.exist?(boot_rb_path)
+  if File.exist?(boot_rb_path)
+    content = File.read(boot_rb_path)
+    if content.include?("bootsnap/setup") && !system("bundle list | grep bootsnap")
+      puts "Fixing bootsnap issue..."
 
-  content = File.read(boot_rb_path)
-  return unless content.include?("bootsnap/setup") && !system("bundle list | grep bootsnap")
+      # Option 1: Add bootsnap to Gemfile
+      unless File.read("Gemfile").include?("bootsnap")
+        puts "Adding bootsnap to Gemfile..."
+        File.open("Gemfile", "a") do |f|
+          f.puts "\n# Reduces boot times through caching; required in config/boot.rb"
+          f.puts "gem \"bootsnap\", require: false"
+        end
+        system("bundle install")
+      end
 
-  puts "Fixing bootsnap issue..."
-
-  # Option 1: Add bootsnap to Gemfile
-  unless File.read("Gemfile").include?("bootsnap")
-    puts "Adding bootsnap to Gemfile..."
-    File.open("Gemfile", "a") do |f|
-      f.puts "\n# Reduces boot times through caching; required in config/boot.rb"
-      f.puts "gem \"bootsnap\", require: false"
+      # Option 2 (fallback): Comment out bootsnap line in boot.rb
+      unless system("bundle list | grep bootsnap")
+        puts "Commenting out bootsnap in boot.rb..."
+        modified_content = content.gsub(
+          'require "bootsnap/setup"',
+          '# require "bootsnap/setup" # Commented out to avoid dependency issues'
+        )
+        File.write(boot_rb_path, modified_content)
+      end
     end
-    system("bundle install")
   end
 
-  # Option 2 (fallback): Comment out bootsnap line in boot.rb
-  return if system("bundle list | grep bootsnap")
+  # Ensure bcrypt is installed
+  return if File.read("Gemfile").include?("bcrypt")
 
-  puts "Commenting out bootsnap in boot.rb..."
-  modified_content = content.gsub(
-    'require "bootsnap/setup"',
-    '# require "bootsnap/setup" # Commented out to avoid dependency issues'
-  )
-  File.write(boot_rb_path, modified_content)
+  puts "Adding bcrypt to Gemfile..."
+  File.open("Gemfile", "a") do |f|
+    f.puts "\n# Use Active Model has_secure_password"
+    f.puts "gem \"bcrypt\", \"~> 3.1.7\""
+  end
+  system("bundle install")
 end
 
 # Helper to test loading the clavis gem

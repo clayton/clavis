@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.7] - 2024-03-19
+
+### Fixed
+- Fixed bcrypt dependency for test Rails application in CI
+- Improved dependency management in test environment
+- Added explicit bcrypt installation to prevent authentication failures
+
 ## [0.6.6] - 2024-03-19
 
 ### Fixed
@@ -100,15 +107,3 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Module name inconsistency between `Clavis::Models::OauthAuthenticatable` and `Clavis::Models::Concerns::OauthAuthenticatable`
-- View helpers not being properly included in application helpers 
-- Issues with migration generators for OAuth identities
-- Documentation inconsistencies between code and examples
-
-### Added
-- Comprehensive integration guide for adding Clavis to existing applications
-- Better error handling and troubleshooting guides
-- Improved support for multiple authentication methods in the same application
-
-## [0.1.1] - 2023-03-16
-
-- Initial release
