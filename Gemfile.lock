@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    clavis (0.6.3)
+    clavis (0.6.4)
       faraday (~> 2.7)
       jwt (~> 2.7)
       rails (~> 8.0)

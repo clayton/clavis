@@ -2,7 +2,7 @@
 
 module Clavis
   if defined?(ActiveRecord::Base)
-    class OauthIdentity < ApplicationRecord
+    class OauthIdentity < defined?(ApplicationRecord) ? ApplicationRecord : ActiveRecord::Base
       belongs_to :authenticatable, polymorphic: true
 
       validates :provider, presence: true

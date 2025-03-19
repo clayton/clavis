@@ -5,7 +5,7 @@ require "rspec/core/rake_task"
 
 RSpec::Core::RakeTask.new(:spec)
 
-task default: :spec
+task default: :ci
 
 # Define an environment task for Rails-dependent tasks
 task :environment do
@@ -35,11 +35,57 @@ namespace :test do
 
   desc "Run all Rails-dependent tests"
   task rails: %i[controllers integration generators]
+
+  desc "Test the actual generator in the rails-app directory"
+  task real_generator: :environment do
+    puts "Testing basic functionality in rails-app..."
+    rails_app_dir = File.expand_path("rails-app", __dir__)
+    unless File.directory?(rails_app_dir)
+      puts "Error: rails-app directory not found"
+      exit 1
+    end
+
+    # Add the gem to the Gemfile if it's not already there
+    gemfile_path = File.join(rails_app_dir, "Gemfile")
+    gemfile_content = File.read(gemfile_path)
+
+    unless gemfile_content.include?("gem \"clavis\"")
+      puts "Adding clavis gem to rails-app Gemfile..."
+      # Add the gem with path to local directory
+      gem_line = "gem \"clavis\", path: \"../.\""
+
+      # Append to Gemfile
+      File.open(gemfile_path, "a") do |f|
+        f.puts "\n#{gem_line}"
+      end
+    end
+
+    Dir.chdir(rails_app_dir) do
+      # Install dependencies
+      puts "Installing dependencies in rails-app..."
+      unless system("bundle install")
+        puts "Error: Failed to install dependencies in rails-app"
+        exit 1
+      end
+
+      # Test loading the gem
+      puts "Testing if the gem can be loaded..."
+      test_code = "require 'clavis'; puts 'Clavis loaded successfully! Version: ' + Clavis::VERSION"
+      load_success = system("bundle exec ruby -e \"#{test_code}\"")
+
+      unless load_success
+        puts "Error: Failed to load the clavis gem in rails-app"
+        exit 1
+      end
+
+      puts "Generator dependency test in rails-app passed successfully!"
+    end
+  end
 end
 
 # Task to run all tests
 desc "Run all tests including Rails controller tests and integration tests"
-task all_tests: [:spec, "test:rails"]
+task all_tests: [:spec, "test:rails", "test:real_generator"]
 
 # Tasks for the dummy Rails app
 namespace :dummy do
@@ -104,4 +150,4 @@ rescue LoadError
 end
 
 desc "Run all CI checks"
-task ci: %i[spec rubocop brakeman]
+task ci: %i[all_tests rubocop brakeman]
