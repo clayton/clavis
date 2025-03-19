@@ -111,6 +111,7 @@ module Clavis
 
         steps << "Configure your providers in config/initializers/clavis.rb"
         steps << "Run migrations: rails db:migrate"
+        steps << "⚠️ Customize the user creation code in app/models/concerns/clavis_user_methods.rb"
         steps << "Add OAuth buttons to your views:\n   <%= clavis_oauth_button :google %>"
 
         # Output numbered steps
@@ -119,7 +120,8 @@ module Clavis
         end
 
         say "\nClavis has configured your User model with OAuth support via the ClavisUserMethods concern."
-        say "You can customize the OAuth user creation logic by editing app/models/concerns/clavis_user_methods.rb"
+        say "IMPORTANT: The default implementation only sets the email field when creating users."
+        say "You MUST customize this to include all required fields for your User model."
 
         say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
       end

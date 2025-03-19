@@ -219,36 +219,48 @@ The concern provides:
 
 ### Customizing User Creation
 
-The generated concern includes a method to find or create users from OAuth data:
+The generated concern includes a method to find or create users from OAuth data. By default, it only sets the email field, which may not be sufficient for your User model:
 
 ```ruby
 # In app/models/concerns/clavis_user_methods.rb
-module ClavisUserMethods
-  extend ActiveSupport::Concern
+def find_or_create_from_clavis(auth_hash)
+  # Find existing user logic...
   
-  included do
-    include Clavis::Models::OauthAuthenticatable
+  # Create new user if none exists
+  if user.nil?
+    user = new(
+      email: auth_hash.dig(:info, :email)
+      # You MUST add other required fields for your User model here!
+    )
     
-    # Uncomment to skip password validation for OAuth users
-    # validates :password, presence: true, unless: :oauth_user?
+    user.save!
   end
   
-  class_methods do
-    def find_or_create_from_clavis(auth_hash)
-      # Find existing user by identity or email
-      # Create new user if none exists
-      # Link OAuth identity to user
-      # ...
-    end
-  end
+  # Create or update the OAuth identity...
 end
 ```
 
-To customize how users are created, simply edit this concern. You can:
-- Change the user attributes set from the auth_hash
-- Add custom validation logic
-- Implement special handling for specific providers
-- Keep this logic separate from your main User model
+⚠️ **IMPORTANT**: You **MUST** customize this method to set all required fields for your User model!
+
+The auth_hash typically contains this information:
+- `auth_hash[:info][:email]` - User's email
+- `auth_hash[:info][:name]` - User's full name
+- `auth_hash[:info][:first_name]` - User's first name
+- `auth_hash[:info][:last_name]` - User's last name
+- `auth_hash[:info][:nickname]` - Username or handle
+- `auth_hash[:info][:image]` - Profile picture URL
+
+Example customization:
+```ruby
+user = new(
+  email: auth_hash.dig(:info, :email),
+  first_name: auth_hash.dig(:info, :first_name),
+  last_name: auth_hash.dig(:info, :last_name),
+  username: auth_hash.dig(:info, :nickname) || "user_#{SecureRandom.hex(4)}",
+  terms_accepted: true,
+  registered_at: Time.current
+)
+```
 
 ### Helper Methods
 

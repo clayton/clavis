@@ -59,14 +59,18 @@ module Clavis
                   # - location: The user's location (some providers)
                   # - verified: Whether the email is verified (some providers)
                   #
-                  # You should include all required fields for YOUR User model.
-                  # If your User model requires fields not available from OAuth,#{" "}
-                  # you can set defaults or prompt the user to complete their profile later.
+                  # Add ALL required fields for YOUR User model below.
+                  # The only field we set by default is email.
+                  # YOU MUST customize this for your application!
           #{"        "}
                   user = new(
-                    email: auth_hash.dig(:info, :email),
-                    name: auth_hash.dig(:info, :name) || "User_#{SecureRandom.hex(4)}"
-                    # Add any other required fields for your User model here
+                    email: auth_hash.dig(:info, :email)
+                    # Add other required fields for your User model here, for example:
+                    # name: auth_hash.dig(:info, :name),
+                    # first_name: auth_hash.dig(:info, :first_name),
+                    # last_name: auth_hash.dig(:info, :last_name),
+                    # username: auth_hash.dig(:info, :nickname),
+                    # terms_accepted: true # for required boolean fields
                   )
           #{"        "}
                   # NOTE: For password-protected User models, we recommend using the#{" "}
@@ -139,12 +143,17 @@ module Clavis
       def show_instructions
         say "\nThe ClavisUserMethods concern has been created and included in your User model."
         say "This gives your User model the ability to find or create users from OAuth data."
-        say "\nTo customize how users are created or found:"
+
+        say "\n⚠️  IMPORTANT: You must customize the user creation code to match your User model!"
+        say "The default implementation only sets the email field, which may not be sufficient."
+
+        say "\nTo customize:"
         say "  1. Edit app/models/concerns/clavis_user_methods.rb"
-        say "  2. Modify the find_or_create_from_clavis method to fit your needs"
-        say "\nFor password-protected User models, uncomment the conditional validation in the concern:"
-        say "  validates :password, presence: true, unless: :oauth_user?"
-        say "\nFor more information, see the Clavis documentation."
+        say "  2. Add required fields to the user creation in find_or_create_from_clavis"
+        say "  3. If your User model requires a password, uncomment the conditional validation:"
+        say "     validates :password, presence: true, unless: :oauth_user?"
+
+        say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
       end
     end
   end
