@@ -88,7 +88,6 @@ task :environment do
 end
 
 # Task to run Rails-dependent tests
-# rubocop:disable Metrics/BlockLength
 namespace :test do
   desc "Run Rails controller tests"
   task controllers: :environment do
@@ -123,31 +122,19 @@ namespace :test do
       exit 1
     end
 
-    # Add the gem to the Gemfile if it's not already there
-    gemfile_path = File.join(rails_app_dir, "Gemfile")
-    gemfile_content = File.read(gemfile_path)
-
-    unless gemfile_content.include?("gem \"clavis\"")
-      puts "Adding clavis gem to rails-app Gemfile..."
-      # Add the gem with path to local directory
-      gem_line = "gem \"clavis\", path: \"../.\""
-
-      # Append to Gemfile
-      File.open(gemfile_path, "a") do |f|
-        f.puts "\n#{gem_line}"
-      end
-    end
-
-    # Add bcrypt explicitly - CRITICAL for has_secure_password in the test app
-    unless gemfile_content.include?("gem \"bcrypt\"")
-      puts "Adding bcrypt directly to Gemfile..."
-      File.open(gemfile_path, "a") do |f|
-        f.puts "\n# Use Active Model has_secure_password"
-        f.puts "gem \"bcrypt\", \"~> 3.1.7\""
-      end
-    end
-
     Dir.chdir(rails_app_dir) do
+      puts "Adding bcrypt"
+      unless system("bundle add bcrypt")
+        puts "Error: Failed to add bcrypt"
+        exit 1
+      end
+
+      puts "Adding clavis"
+      unless system("bundle add clavis")
+        puts "Error: Failed to add clavis"
+        exit 1
+      end
+
       # Install dependencies
       puts "Installing dependencies in rails-app..."
       unless system("bundle install")
@@ -180,8 +167,6 @@ namespace :test do
     end
   end
 end
-# rubocop:enable Metrics/BlockLength
-
 # Task to run all tests
 desc "Run all tests including Rails controller tests and integration tests"
 task all_tests: [:spec, "test:rails", "test:real_generator"]
