@@ -10,7 +10,7 @@ module Clavis
                   :raise_on_invalid_redirect, :enforce_https, :allow_http_localhost, :verify_ssl,
                   :minimum_tls_version, :validate_inputs, :sanitize_inputs, :rotate_session_after_login,
                   :session_key_prefix, :logger, :log_level, :token_encryption_key, :csrf_protection_enabled,
-                  :valid_redirect_schemes, :view_helpers_auto_include
+                  :valid_redirect_schemes, :view_helpers_auto_include, :user_class, :user_finder_method
 
     def initialize
       @providers = {}
@@ -52,6 +52,10 @@ module Clavis
       @csrf_protection_enabled = true
       @valid_redirect_schemes = %w[http https]
       @view_helpers_auto_include = true
+
+      # User creation configuration
+      @user_class = "User"
+      @user_finder_method = :find_or_create_from_clavis
     end
 
     # Returns the list of supported providers

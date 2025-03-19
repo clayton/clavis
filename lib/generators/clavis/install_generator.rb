@@ -98,17 +98,15 @@ module Clavis
         # Next steps
         say "\nNext steps:"
 
-        # Build the steps list with CSS at position 4
         steps = []
-
-        steps << "Configure your providers in config/initializers/clavis.rb"
-        steps << "Run migrations: rails db:migrate"
-        steps << "Include the OauthAuthenticatable module in your User model:\n   class User < ApplicationRecord\n     include Clavis::Models::OauthAuthenticatable\n   end"
 
         if @provide_css_instructions
           steps << "Include the Clavis styles in your layout:\n   <%= stylesheet_link_tag 'clavis_styles' %>"
         end
 
+        steps << "Configure your providers in config/initializers/clavis.rb"
+        steps << "Run migrations: rails db:migrate"
+        steps << "Add find_or_create_from_clavis method to your User model:\n   rails generate clavis:user_method"
         steps << "Add OAuth buttons to your views:\n   <%= clavis_oauth_button :google %>"
 
         # Output numbered steps

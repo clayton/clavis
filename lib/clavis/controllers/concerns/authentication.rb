@@ -125,45 +125,42 @@ module Clavis
 
           provider = Clavis.provider(provider_name)
 
-          # Strip any quotes that might be surrounding the code
-          clean_code = params[:code].to_s.gsub(/\A["']|["']\Z/, "")
+          begin
+            # Exchange code for tokens
+            auth_hash = provider.process_callback(params[:code])
 
-          auth_hash = provider.process_callback(clean_code)
+            # Find or create the user using the configured class and method
+            user_class = Clavis.configuration.user_class.constantize
+            finder_method = Clavis.configuration.user_finder_method
 
-          # Verify nonce in ID token if present
-          if auth_hash[:id_token_claims] &&
-             auth_hash[:id_token_claims][:nonce] &&
-             !Clavis::Security::SessionManager.valid_nonce?(
-               session,
-               auth_hash[:id_token_claims][:nonce],
-               clear_after_validation: true
-             )
-            raise Clavis::InvalidNonce, "Invalid nonce in ID token"
-          end
+            # Ensure the configured method exists
+            unless user_class.respond_to?(finder_method)
+              raise Clavis::ConfigurationError,
+                    "The method '#{finder_method}' is not defined on the #{user_class.name} class. " \
+                    "Please implement this method to handle user creation from OAuth, or " \
+                    "configure a different user_finder_method in your Clavis configuration."
+            end
 
-          user = find_or_create_user_from_oauth(auth_hash)
+            # Call the configured method to find or create the user
+            user = user_class.public_send(finder_method, auth_hash)
 
-          # Rotate session ID to prevent session fixation
-          if defined?(request) && request.respond_to?(:session) && request.session.respond_to?(:id)
-            new_session_id = SecureRandom.hex(32)
-            Clavis::Security::SessionManager.rotate_session_id(
-              session,
-              new_session_id,
-              preserve_keys: [:user_id]
-            )
-          end
+            # Rotate session ID for security
+            Clavis::Security::SessionManager.rotate_session(request) if Clavis.configuration.rotate_session_after_login
 
-          # Let the application handle the user authentication
-          if block_given?
-            yield(user, auth_hash)
-          else
-            # Default behavior: redirect to the stored redirect URI or root path
-            redirect_uri = Clavis::Security::SessionManager.validate_and_retrieve_redirect_uri(
-              session,
-              default: "/"
-            )
+            # Store additional information in the session
+            Clavis::Security::SessionManager.store_auth_info(session, auth_hash)
 
-            redirect_to redirect_uri, allow_other_host: true
+            # Invoke custom claims processor if configured
+            if Clavis.configuration.claims_processor.respond_to?(:call)
+              Clavis.configuration.claims_processor.call(auth_hash, user)
+            end
+
+            # Yield to block for custom processing
+            yield(user, auth_hash) if block_given?
+          rescue StandardError => e
+            Rails.logger.error "Clavis: OAuth callback error: #{e.class.name} - #{e.message}" if defined?(Rails)
+            Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}" if defined?(Rails) && e.backtrace
+            raise Clavis::AuthenticationError.new(e.message)
           end
         end
 

@@ -19,6 +19,16 @@ Clavis.configure do |config|
 
   # Enable verbose logging for debugging
   # config.verbose_logging = true
+  
+  # User class and finder method
+  # These settings control how Clavis finds or creates users from OAuth data
+  # config.user_class = "User" # The class to use for user creation/lookup
+  # config.user_finder_method = :find_or_create_from_clavis # The method to call on user_class
+  #
+  # Make sure to add this method to your User model:
+  #   rails generate clavis:user_method
+  #
+  # Or implement it manually with your custom logic
 
   # Custom claims processor
   # config.claims_processor = proc do |auth_hash, user|

@@ -201,33 +201,87 @@ end
 
 ## User Model Integration
 
-The generator adds fields to your User model and includes the `OauthAuthenticatable` module.
-
-For manual integration:
+Clavis delegates user creation and management to your application through a finder method. After installing Clavis, you need to add a method to your User model that handles the creation of users from OAuth data:
 
 ```ruby
-# app/models/user.rb
-class User < ApplicationRecord
-  include Clavis::Models::OauthAuthenticatable
-  
-  # Optional: Skip password validation for OAuth users
-  def password_required?
-    !oauth_user?
+# Add this method to your User model
+# You can use the generator to create it:
+# rails generate clavis:user_method
+
+def self.find_or_create_from_clavis(auth_hash)
+  # First try to find an existing identity
+  identity = Clavis::OauthIdentity.find_by(
+    provider: auth_hash[:provider],
+    uid: auth_hash[:uid]
+  )
+  return identity.user if identity&.user
+
+  # Try to find by email if available
+  user = User.find_by(email: auth_hash.dig(:info, :email)) if auth_hash.dig(:info, :email)
+
+  # Create a new user if none exists
+  if user.nil?
+    user = User.new(
+      email: auth_hash.dig(:info, :email),
+      name: auth_hash.dig(:info, :name) || "User_#{SecureRandom.hex(4)}"
+      # Add any other required fields for your User model
+    )
+    
+    # Set a random password if required
+    if user.respond_to?(:password=)
+      password = SecureRandom.hex(16)
+      user.password = password
+      user.password_confirmation = password if user.respond_to?(:password_confirmation=)
+    end
+    
+    user.save!
   end
+
+  # Create or update the OAuth identity
+  identity = Clavis::OauthIdentity.find_or_initialize_by(
+    provider: auth_hash[:provider],
+    uid: auth_hash[:uid]
+  )
+  
+  identity.update!(
+    user: user,
+    auth_data: auth_hash[:info],
+    token: auth_hash.dig(:credentials, :token),
+    refresh_token: auth_hash.dig(:credentials, :refresh_token),
+    expires_at: auth_hash.dig(:credentials, :expires_at)
+  )
+
+  user
 end
 ```
 
-Customize user creation:
+### Customizing User Creation
+
+You can customize how users are created by modifying this method or configuring Clavis to use a different class or method:
 
 ```ruby
-# app/models/user.rb
-def self.find_for_oauth(auth_hash)
-  super do |user, auth|
-    user.name = auth[:info][:name]
-    user.email = auth[:info][:email]
-    user.avatar_url = auth[:info][:picture] if user.respond_to?(:avatar_url)
-  end
+# config/initializers/clavis.rb
+Clavis.configure do |config|
+  # Use a different class
+  config.user_class = "Account"
+  
+  # Use a different method name
+  config.user_finder_method = :create_from_oauth
 end
+```
+
+### Adding Required Fields
+
+If your User model has required fields, make sure to include them when creating the user:
+
+```ruby
+user = User.new(
+  email: auth_hash.dig(:info, :email),
+  name: auth_hash.dig(:info, :name),
+  username: auth_hash.dig(:info, :nickname) || "user_#{SecureRandom.hex(4)}",
+  # Add other required fields with appropriate defaults
+  terms_accepted: true
+)
 ```
 
 ## View Integration
