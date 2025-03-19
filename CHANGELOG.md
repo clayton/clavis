@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.6] - 2024-03-19
+
+### Fixed
+- Fixed CI issues with Rails application testing
+- Improved test suite reliability with better error handling
+- Enhanced Rails generator tests to handle bootsnap dependency
+- Added automatic fixes for common Rails initialization issues
+
 ## [0.6.0] - 2024-05-10
 
 ### Added

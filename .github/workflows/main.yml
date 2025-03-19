@@ -39,6 +39,8 @@ jobs:
           bundle config set --local path vendor/bundle
           bundle config set --local with 'test'
           bundle install --jobs 4 --retry 3
+          gem install rails # Ensure Rails is available for creating the test app
+          gem install bcrypt # Ensure bcrypt is available for authentication
           
       - name: Run tests
         run: bundle exec rake all_tests

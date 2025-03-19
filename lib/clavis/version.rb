@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
 module Clavis
-  VERSION = "0.6.5"
+  # The current version of Clavis.
+  VERSION = "0.6.6"
 end
