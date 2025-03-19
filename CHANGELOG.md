@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.8] - 2024-03-20
+
+### Fixed
+- Fixed route conflict issues in engine mounting
+- Improved route handling with proper tracking of registered routes
+- Replaced global variables with Engine instance variables for route tracking
+- Fixed bcrypt dependency issues in CI test Rails app
+- Updated Rails test app to use the built-in Rails 8 authentication generator
+- Removed oauth_button legacy alias in favor of clavis_oauth_button
+
 ## [0.6.7] - 2024-03-19
 
 ### Fixed
