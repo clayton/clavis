@@ -71,7 +71,12 @@ def fix_bootsnap_issue
     end
   end
 
-  # Ensure bcrypt is installed
+  # Ensure bcrypt is installed - critical for has_secure_password
+  ensure_bcrypt_installed
+end
+
+# Helper to ensure bcrypt is correctly installed
+def ensure_bcrypt_installed
   return if File.read("Gemfile").include?("bcrypt")
 
   puts "Adding bcrypt to Gemfile..."
@@ -79,6 +84,16 @@ def fix_bootsnap_issue
     f.puts "\n# Use Active Model has_secure_password"
     f.puts "gem \"bcrypt\", \"~> 3.1.7\""
   end
+
+  puts "Installing bcrypt dependency..."
+  system("bundle install")
+
+  # Verify bcrypt can be loaded
+  return if system("bundle exec ruby -e 'require \"bcrypt\"'")
+
+  puts "Error: Failed to load bcrypt after installation"
+  puts "Attempting to install bcrypt directly..."
+  system("gem install bcrypt -v '~> 3.1.7'")
   system("bundle install")
 end
 
@@ -105,6 +120,10 @@ def update_user_model(rails_app_dir)
         )
         File.write(user_model_path, updated_content)
       end
+
+      # Verify bcrypt is available
+      puts "Verifying bcrypt is available for User model..."
+      system("bundle exec ruby -e 'require \"bcrypt\"; puts \"bcrypt loaded successfully\"'")
     end
   end
 end
@@ -173,8 +192,9 @@ namespace :test do
         exit 1
       end
 
-      # Fix bootsnap issue
+      # Fix bootsnap issue and ensure bcrypt is installed
       fix_bootsnap_issue
+      ensure_bcrypt_installed
 
       # Test loading the gem
       unless test_clavis_loading(rails_app_dir)
@@ -209,21 +229,30 @@ task all_tests: [:spec, "test:rails", "test:real_generator"]
 # Helper to set up rails app authentication
 def setup_rails_authentication(rails_app_dir, gemfile_content)
   Dir.chdir(rails_app_dir) do
-    # Generate authentication with User model
-    puts "Generating authentication with User model..."
-    system("bin/rails generate model User email:string password_digest:string")
-    system("bin/rails generate controller Users new create")
-    system("bin/rails generate controller Sessions new create destroy")
-
-    # Add bcrypt if not already in Gemfile
+    # Add bcrypt first to ensure it's available
     unless gemfile_content.include?("gem \"bcrypt\"")
       puts "Adding bcrypt to Gemfile..."
       File.open("Gemfile", "a") do |f|
         f.puts "\n# Use Active Model has_secure_password"
         f.puts "gem \"bcrypt\", \"~> 3.1.7\""
       end
+      puts "Installing bcrypt..."
       system("bundle install")
+
+      # Verify bcrypt installation
+      unless system("bundle exec ruby -e 'require \"bcrypt\"; puts \"bcrypt installed successfully\"'")
+        puts "Warning: bcrypt installation verification failed"
+        puts "Attempting to install bcrypt directly..."
+        system("gem install bcrypt -v '~> 3.1.7'")
+        system("bundle install")
+      end
     end
+
+    # Generate authentication with User model
+    puts "Generating authentication with User model..."
+    system("bin/rails generate model User email:string password_digest:string")
+    system("bin/rails generate controller Users new create")
+    system("bin/rails generate controller Sessions new create destroy")
   end
 end
 

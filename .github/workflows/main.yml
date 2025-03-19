@@ -42,6 +42,10 @@ jobs:
           gem install rails # Ensure Rails is available for creating the test app
           gem install bcrypt # Ensure bcrypt is available for authentication
           
+          # Verify bcrypt installation
+          echo "Verifying bcrypt installation..."
+          ruby -e 'require "bcrypt"; puts "bcrypt v#{BCrypt::VERSION} is successfully installed"'
+          
       - name: Run tests
         run: bundle exec rake all_tests
         
