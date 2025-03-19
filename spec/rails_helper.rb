@@ -33,7 +33,7 @@ require "clavis/engine"
 begin
   require "omniauth"
 rescue LoadError
-  puts "OmniAuth not available. Authentication tests may be skipped."
+  Rails.logger.debug "OmniAuth not available. Authentication tests may be skipped."
 end
 
 # Load support files (excluding any already loaded)

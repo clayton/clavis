@@ -8,6 +8,8 @@ AllCops:
     - bin/**/*
     - db/**/*
     - node_modules/**/*
+    - rails-app/**/*
+    - tmp/**/*
 
 # For gems it's typical to declare development dependencies in the gemspec
 Gemspec/DevelopmentDependencies:

@@ -7,22 +7,28 @@ RSpec::Core::RakeTask.new(:spec)
 
 task default: :spec
 
+# Define an environment task for Rails-dependent tasks
+task :environment do
+  # This is a no-op task to satisfy dependencies
+  # Rails would normally provide this task
+end
+
 # Task to run Rails-dependent tests
 namespace :test do
   desc "Run Rails controller tests"
-  task :controllers do
+  task controllers: :environment do
     ENV["RAILS_ENV"] = "test"
     system("bundle exec rspec spec/clavis/controllers/*_spec.rb")
   end
 
   desc "Run Rails integration tests"
-  task :integration do
+  task integration: :environment do
     ENV["RAILS_ENV"] = "test"
     system("bundle exec rspec spec/integration/*_spec.rb")
   end
 
   desc "Run Rails generator tests"
-  task :generators do
+  task generators: :environment do
     ENV["RAILS_ENV"] = "test"
     system("bundle exec rspec spec/generators/**/*_generator_spec.rb")
   end
@@ -38,7 +44,7 @@ task all_tests: [:spec, "test:rails"]
 # Tasks for the dummy Rails app
 namespace :dummy do
   desc "Prepare the dummy Rails app for testing"
-  task :prepare do
+  task prepare: :environment do
     app_path = File.expand_path("spec/dummy", __dir__)
 
     # Ensure the db directory exists
@@ -57,7 +63,7 @@ namespace :dummy do
     ActiveRecord::Schema.verbose = false
     load File.expand_path("spec/dummy/db/schema.rb", __dir__)
 
-    puts "Dummy Rails app prepared successfully!"
+    Rails.logger.debug "Dummy Rails app prepared successfully!"
   end
 
   desc "Run RSpec tests with the dummy Rails app"
@@ -68,7 +74,7 @@ namespace :dummy do
 end
 
 # Task to cleanup the dummy Rails app
-task :clean do
+task clean: :environment do
   app_path = File.expand_path("spec/dummy", __dir__)
   db_path = File.join(app_path, "db", "test.sqlite3")
   FileUtils.rm_f(db_path)
@@ -79,7 +85,7 @@ begin
   RuboCop::RakeTask.new
 rescue LoadError
   desc "Run RuboCop"
-  task :rubocop do
+  task rubocop: :environment do
     abort "RuboCop is not available. Run 'bundle install' first."
   end
 end
@@ -87,12 +93,12 @@ end
 begin
   require "brakeman"
   desc "Run Brakeman"
-  task :brakeman do
+  task brakeman: :environment do
     Brakeman.run(app_path: ".")
   end
 rescue LoadError
   desc "Run Brakeman"
-  task :brakeman do
+  task brakeman: :environment do
     abort "Brakeman is not available. Run 'bundle install' first."
   end
 end

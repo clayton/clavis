@@ -116,7 +116,7 @@ class Logger
 
   def info(message); end
 
-  def debug(message); end
+  def debug(message = nil); end
 
   def warn(message); end
 

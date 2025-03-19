@@ -58,7 +58,7 @@ module Clavis
         def valid_code?(code)
           return false if code.nil? || code.empty?
 
-          is_valid = code =~ CODE_REGEX ? true : false
+          is_valid = CODE_REGEX.match?(code)
 
           # For now, be more permissive
           # Eventually, we should properly validate but the regex might need adjustment
@@ -74,7 +74,7 @@ module Clavis
         def valid_state?(state)
           return false if state.nil? || state.empty?
 
-          state =~ STATE_REGEX ? true : false
+          STATE_REGEX.match?(state)
         end
 
         # Validates an email address
@@ -83,7 +83,7 @@ module Clavis
         def valid_email?(email)
           return false if email.nil? || email.empty?
 
-          email =~ EMAIL_REGEX ? true : false
+          EMAIL_REGEX.match?(email)
         end
 
         # Validates a token response

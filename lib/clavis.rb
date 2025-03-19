@@ -31,6 +31,9 @@ require_relative "clavis/models/concerns/oauth_authenticatable"
 require_relative "clavis/controllers/concerns/authentication"
 require_relative "clavis/view_helpers"
 
+# Required for delegate method
+require "active_support/core_ext/module/delegation"
+
 # Create an alias for backward compatibility
 module Clavis
   module Models
@@ -100,12 +103,13 @@ module Clavis
       @provider_registry ||= {}
     end
 
+    # Define logger methods manually instead of using delegate
     def logger
       Logging.logger
     end
 
-    def logger=(logger)
-      Logging.logger = logger
+    def logger=(value)
+      Logging.logger = value
     end
   end
 end

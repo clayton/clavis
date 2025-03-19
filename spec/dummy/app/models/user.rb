@@ -29,7 +29,7 @@ class User < ApplicationRecord
 
     # Set attributes
     attributes.each do |key, value|
-      send("#{key}=", value) if respond_to?("#{key}=")
+      send(:"#{key}=", value) if respond_to?(:"#{key}=")
     end
 
     # Add to users collection
@@ -62,7 +62,7 @@ class User < ApplicationRecord
     end
 
     # Call save to maintain compatibility with both ActiveRecord and our mocks
-    user.save if user.respond_to?(:save) && (user.respond_to?(:changed?) ? user.changed? : true)
+    user.save! if user.respond_to?(:save) && (user.respond_to?(:changed?) ? user.changed? : true)
     user
   end
 

@@ -50,7 +50,7 @@ module Clavis
 
       # Make ViewHelpers available to ApplicationHelper
       ActiveSupport.on_load(:after_initialize) do
-        if defined?(ApplicationHelper) && !ApplicationHelper.included_modules.include?(Clavis::ViewHelpers)
+        if defined?(ApplicationHelper) && ApplicationHelper.included_modules.exclude?(Clavis::ViewHelpers)
           ApplicationHelper.include(Clavis::ViewHelpers)
         end
       end

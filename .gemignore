@@ -1,0 +1,6 @@
+# Add .gitignore-style patterns here
+rails-app/
+agent/
+tmp/
+*.gem
+.ruby-lsp/

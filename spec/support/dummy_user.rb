@@ -64,7 +64,7 @@ module DummyUserSupport
       # Create the RailsUser class if it doesn't exist
       unless defined?(RailsUser)
         # Create a RailsUser class that inherits from ActiveRecord::Base
-        klass = Class.new(ActiveRecord::Base) do
+        klass = Class.new(ApplicationRecord) do
           self.table_name = "users"
           include Clavis::Models::OauthAuthenticatable if defined?(Clavis::Models::OauthAuthenticatable)
 
@@ -72,7 +72,7 @@ module DummyUserSupport
             # Simplified implementation for testing
             user = find_or_initialize_by(email: auth.dig(:info, :email))
             user.attributes = { name: auth.dig(:info, :name) } if auth.dig(:info, :name)
-            user.save
+            user.save!
             user
           end
         end
@@ -82,12 +82,12 @@ module DummyUserSupport
       end
 
       # Override the existing User class if it's a DummyUser
-      if defined?(User) && User.ancestors.include?(DummyUser)
+      if defined?(User) && User <= DummyUser
         Object.send(:remove_const, :User)
         Object.const_set(:User, Class.new(RailsUser))
       end
     rescue StandardError => e
-      puts "Warning: Failed to set up ActiveRecord User model: #{e.message}"
+      Rails.logger.debug { "Warning: Failed to set up ActiveRecord User model: #{e.message}" }
     end
   end
 end

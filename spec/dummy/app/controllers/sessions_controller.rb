@@ -2,7 +2,7 @@
 
 class SessionsController < ApplicationController
   # Skip authentication for new and create actions
-  skip_before_action :authenticate_user!, only: %i[new create], if: -> { respond_to?(:authenticate_user!) }
+  skip_before_action :authenticate_user!, only: %i[new create]
 
   def new
     # Login form

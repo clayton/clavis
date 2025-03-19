@@ -61,7 +61,7 @@ module Clavis
               user = new
 
               # Set email if present
-              user.send("#{email_field}=", email) if email.present? && user.respond_to?("#{email_field}=")
+              user.send(:"#{email_field}=", email) if email.present? && user.respond_to?(:"#{email_field}=")
 
               # Set password if applicable
               if user.respond_to?(:password=)
@@ -74,7 +74,7 @@ module Clavis
               if auth_hash.dig(:info, :name).present?
                 name_parts = auth_hash.dig(:info, :name).split
                 user.first_name = name_parts.first if user.respond_to?(:first_name=)
-                user.last_name = name_parts[1..].join(" ") if name_parts.size > 1 && user.respond_to?(:last_name=)
+                user.last_name = name_parts.drop(1).join(" ") if name_parts.size > 1 && user.respond_to?(:last_name=)
               end
 
               # Set other attributes if available
@@ -112,7 +112,7 @@ module Clavis
 
             new_tokens = provider_instance.refresh_token(identity.refresh_token)
 
-            identity.update(
+            identity.update!(
               token: new_tokens[:access_token],
               refresh_token: new_tokens[:refresh_token] || identity.refresh_token,
               expires_at: new_tokens[:expires_at] ? Time.at(new_tokens[:expires_at]) : nil

@@ -2,7 +2,7 @@
 
 class HomeController < ApplicationController
   # Home page - does not require authentication
-  skip_before_action :authenticate_user!, only: [:index], if: -> { respond_to?(:authenticate_user!) }
+  skip_before_action :authenticate_user!, only: [:index]
 
   def index
     # Home page

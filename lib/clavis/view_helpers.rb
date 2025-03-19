@@ -57,10 +57,10 @@ module Clavis
     end
 
     def clavis_auth_path(provider)
-      Rails.application.routes.url_helpers.send("auth_#{provider}_path")
+      Rails.application.routes.url_helpers.send(:"auth_#{provider}_path")
     rescue NoMethodError
       # Fallback for custom providers
-      Rails.application.routes.url_helpers.send("auth_path", provider: provider)
+      Rails.application.routes.url_helpers.send(:auth_path, provider: provider)
     end
 
     def clavis_default_button_text(provider)
@@ -234,8 +234,8 @@ module Clavis
       html_options
     end
 
-    def clavis_capture(&block)
-      block.call
+    def clavis_capture
+      yield
     end
 
     def controller_name

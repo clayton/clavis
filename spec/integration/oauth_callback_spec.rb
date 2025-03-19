@@ -55,7 +55,7 @@ module Clavis
 
     def initialize(attributes = {})
       attributes.each do |key, value|
-        send("#{key}=", value) if respond_to?("#{key}=")
+        send(:"#{key}=", value) if respond_to?(:"#{key}=")
       end
       @auth_data = {}
     end
@@ -74,7 +74,7 @@ module Clavis
 
     def update(attributes)
       attributes.each do |key, value|
-        send("#{key}=", value) if respond_to?("#{key}=")
+        send(:"#{key}=", value) if respond_to?(:"#{key}=")
       end
       true
     end

@@ -24,10 +24,22 @@ Gem::Specification.new do |spec|
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
   gemspec = File.basename(__FILE__)
+
+  # Use .gemignore to exclude files
+  gemignore = if File.exist?(".gemignore")
+                File.readlines(".gemignore").map(&:strip).reject do |line|
+                  line.empty? || line.start_with?("#")
+                end
+              else
+                []
+              end
+
+  # NOTE: rails-app/ is excluded as it's only used for integration testing
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
-    ls.readlines("\x0", chomp: true).reject do |f|
+    ls.each_line("\x0", chomp: true).reject do |f|
       (f == gemspec) ||
-        f.start_with?(*%w[bin/ test/ spec/ features/ .git .github appveyor Gemfile])
+        f.start_with?(*%w[bin/ test/ spec/ features/ .git .github appveyor Gemfile rails-app/]) ||
+        gemignore.any? { |pattern| File.fnmatch?(pattern, f) }
     end
   end
   spec.bindir = "exe"

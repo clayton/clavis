@@ -30,13 +30,13 @@ RSpec.describe Clavis::Engine, type: :engine do
 
       it "can load helpers into ActionController" do
         # Manually include the module for testing
-        ActionController::Base.include(Clavis::Controllers::Concerns::Authentication)
+        ActiveSupport.on_load(:action_controller) { include Clavis::Controllers::Concerns::Authentication }
         expect(ActionController::Base.included_modules).to include(Clavis::Controllers::Concerns::Authentication)
       end
 
       it "can load helpers into ActionView" do
         # Manually include the module for testing
-        ActionView::Base.include(Clavis::ViewHelpers)
+        ActiveSupport.on_load(:action_view) { include Clavis::ViewHelpers }
         expect(ActionView::Base.included_modules).to include(Clavis::ViewHelpers)
       end
     end
@@ -45,8 +45,8 @@ RSpec.describe Clavis::Engine, type: :engine do
   describe "Rails integration" do
     before do
       # Manually include modules for testing
-      ActionView::Base.include(Clavis::ViewHelpers)
-      ActionController::Base.include(Clavis::Controllers::Concerns::Authentication)
+      ActiveSupport.on_load(:action_view) { include Clavis::ViewHelpers }
+      ActiveSupport.on_load(:action_controller) { include Clavis::Controllers::Concerns::Authentication }
     end
 
     it "includes view helpers in ActionView" do

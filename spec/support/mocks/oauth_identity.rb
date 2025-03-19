@@ -36,7 +36,7 @@ module Clavis
 
           new_tokens = provider_instance.refresh_token(refresh_token)
 
-          update(
+          update!(
             token: new_tokens[:access_token],
             refresh_token: new_tokens[:refresh_token] || refresh_token,
             expires_at: new_tokens[:expires_at] ? Time.at(new_tokens[:expires_at]) : nil
@@ -54,7 +54,7 @@ module Clavis
 
       def update(attributes = {})
         attributes.each do |key, value|
-          send("#{key}=", value)
+          send(:"#{key}=", value)
         end
         true
       end

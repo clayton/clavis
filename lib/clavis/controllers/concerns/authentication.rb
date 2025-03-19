@@ -149,7 +149,7 @@ module Clavis
                        begin
                          new_user = User.new
                          if new_user.respond_to?(user_email_field)
-                           new_user.send("#{user_email_field}=", auth_hash.dig(:info, :email))
+                           new_user.send(:"#{user_email_field}=", auth_hash.dig(:info, :email))
                          end
 
                          # Set password if applicable
@@ -197,7 +197,7 @@ module Clavis
 
           return unless name_parts.size > 1 && user.respond_to?(:last_name=)
 
-          user.last_name = name_parts[1..].join(" ")
+          user.last_name = name_parts.drop(1).join(" ")
         end
       end
     end

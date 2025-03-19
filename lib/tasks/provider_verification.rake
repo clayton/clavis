@@ -2,7 +2,7 @@
 
 namespace :clavis do
   desc "Verify all providers implement required methods"
-  task :verify_providers do
+  task verify_providers: :environment do
     require "clavis"
 
     # Define the methods all providers must implement
@@ -42,7 +42,7 @@ namespace :clavis do
 
     # Check each provider
     providers.each do |provider_class|
-      puts "Checking #{provider_class.name}..."
+      Rails.logger.debug { "Checking #{provider_class.name}..." }
 
       begin
         provider = provider_class.new(args)
@@ -57,21 +57,21 @@ namespace :clavis do
 
     # Report results
     if missing_methods.any? || errors.any?
-      puts "FAILURES:"
+      Rails.logger.debug "FAILURES:"
 
       if missing_methods.any?
-        puts "\nMissing Methods:"
-        puts missing_methods.join("\n")
+        Rails.logger.debug "\nMissing Methods:"
+        Rails.logger.debug missing_methods.join("\n")
       end
 
       if errors.any?
-        puts "\nInitialization Errors:"
-        puts errors.join("\n")
+        Rails.logger.debug "\nInitialization Errors:"
+        Rails.logger.debug errors.join("\n")
       end
 
       exit 1
     else
-      puts "✅ All providers implement required methods."
+      Rails.logger.debug "✅ All providers implement required methods."
     end
   end
 end
