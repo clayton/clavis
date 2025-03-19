@@ -81,24 +81,6 @@ def test_clavis_loading(rails_app_dir)
   end
 end
 
-# Helper to verify and update User model
-def update_user_model(rails_app_dir)
-  Dir.chdir(rails_app_dir) do
-    user_model_path = "app/models/user.rb"
-    if File.exist?(user_model_path)
-      puts "Updating User model with has_secure_password..."
-      user_model_content = File.read(user_model_path)
-      unless user_model_content.include?("has_secure_password")
-        updated_content = user_model_content.gsub(
-          "class User < ApplicationRecord",
-          "class User < ApplicationRecord\n  has_secure_password\n  validates :email, presence: true, uniqueness: true"
-        )
-        File.write(user_model_path, updated_content)
-      end
-    end
-  end
-end
-
 # Define an environment task for Rails-dependent tasks
 task :environment do
   # This is a no-op task to satisfy dependencies
@@ -288,15 +270,14 @@ task :bootstrap_rails_app do
       end
     end
 
+    safe_rails_command(rails_app_dir, "bin/rails g model User name:string")
+
     # Set up authentication
     setup_rails_authentication(rails_app_dir, gemfile_content)
 
     # Use safe_rails_command for migrations
     safe_rails_command(rails_app_dir, "bin/rails db:migrate RAILS_ENV=development")
     safe_rails_command(rails_app_dir, "bin/rails db:migrate RAILS_ENV=test")
-
-    # Update User model with has_secure_password
-    update_user_model(rails_app_dir)
 
     puts "Rails application created successfully with authentication!"
   end
