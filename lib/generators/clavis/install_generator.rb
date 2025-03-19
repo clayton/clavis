@@ -25,7 +25,7 @@ module Clavis
 
         # Then, check for the users table if it exists
         if defined?(ActiveRecord::Base) && ActiveRecord::Base.connection.table_exists?(:users)
-          migration_template("add_oauth_to_users.rb", "db/migrate/add_oauth_to_users.rb")
+          migration_template "add_oauth_to_users.rb", "db/migrate/add_oauth_to_users.rb"
         else
           say "Skipping User table migration because users table doesn't exist."
           say "Run 'rails g model User' first if you want to add OAuth fields to your User model."
@@ -56,7 +56,7 @@ module Clavis
         # Check if the table already exists to avoid duplicate migrations
         return if migration_exists?("db/migrate", "create_clavis_oauth_identities")
 
-        migration_template("migration.rb", "db/migrate/create_clavis_oauth_identities.rb")
+        migration_template "migration.rb", "db/migrate/create_clavis_oauth_identities.rb"
       end
 
       def migration_exists?(dir, name)

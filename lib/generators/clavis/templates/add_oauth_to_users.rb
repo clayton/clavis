@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddOauthToUsers < ActiveRecord::Migration[6.0]
+class AddOauthToUsers < ActiveRecord::Migration[8.0]
   def change
     # Skip if any of these columns already exist
     return if column_exists?(:users, :provider) || column_exists?(:users, :uid)
