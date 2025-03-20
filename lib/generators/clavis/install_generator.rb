@@ -103,32 +103,49 @@ module Clavis
       end
 
       def show_post_install_message
-        say "\nClavis has been installed successfully!"
+        say "\nClavis has been installed successfully! 🔑"
 
-        # Next steps
-        say "\nNext steps:"
+        # What was done section
+        say "\n=== What Was Done ==="
+        say "✅ Generated migration for OAuth identities"
+        say "✅ Added OAuth fields to your User model"
+        say "✅ Created ClavisUserMethods concern for your User model"
+        say "✅ Mounted Clavis engine at '/auth' in routes.rb"
+        say "✅ Generated configuration initializer"
 
+        # Required steps section
+        say "\n=== Required Steps ==="
         steps = []
 
-        if @provide_css_instructions
-          steps << "Include the Clavis styles in your layout:\n   <%= stylesheet_link_tag 'clavis_styles' %>"
-        end
-
-        steps << "Configure your providers in config/initializers/clavis.rb"
-        steps << "Run migrations: rails db:migrate"
-        steps << "⚠️ Customize the user creation code in app/models/concerns/clavis_user_methods.rb"
-        steps << "Add OAuth buttons to your views:\n   <%= clavis_oauth_button :google %>"
+        steps << "Run migrations:\n   $ rails db:migrate"
+        steps << "Configure your providers in config/initializers/clavis.rb:\n   • Add your client_id and client_secret\n   • Set correct redirect_uri values" # rubocop:disable Layout/LineLength
+        steps << "⚠️ IMPORTANT: Customize user creation in app/models/concerns/clavis_user_methods.rb\n   • The default only sets the email field, which is likely insufficient\n   • Add all required fields for your User model" # rubocop:disable Layout/LineLength
 
         # Output numbered steps
         steps.each_with_index do |step, index|
           say "#{index + 1}. #{step}"
         end
 
-        say "\nClavis has configured your User model with OAuth support via the ClavisUserMethods concern."
-        say "IMPORTANT: The default implementation only sets the email field when creating users."
-        say "You MUST customize this to include all required fields for your User model."
+        # Password validation section
+        say "\n=== For Password-Protected Users ==="
+        say "If your User model uses has_secure_password:"
+        say "• Uncomment the password validation section in app/models/concerns/clavis_user_methods.rb"
+        say "• Choose one of the approaches described there"
 
-        say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
+        # View integration section
+        say "\n=== Using In Your Views ==="
+        say "Add OAuth buttons to your login page:"
+        say "<%= clavis_oauth_button :google %>"
+        say "<%= clavis_oauth_button :github %>"
+
+        # CSS styling section
+        if @provide_css_instructions
+          say "\n=== For CSS Styling ==="
+          say "Include Clavis styles in your layout:"
+          say "<%= stylesheet_link_tag 'clavis_styles' %>"
+        end
+
+        say "\nFor more information, see: https://github.com/clayton/clavis"
       end
 
       private

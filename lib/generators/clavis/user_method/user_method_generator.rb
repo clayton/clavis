@@ -197,22 +197,11 @@ module Clavis
       end
 
       def show_instructions
-        say "\nThe ClavisUserMethods concern has been created and included in your User model."
-        say "This gives your User model the ability to find or create users from OAuth data."
-
-        say "\n⚠️  IMPORTANT: You must customize the user creation code to match your User model!"
-        say "The default implementation only sets the email field, which may not be sufficient."
-
-        say "\n⚠️  IMPORTANT: If your User model uses has_secure_password, you need to handle password validation!"
-        say "Look for the password validation section in app/models/concerns/clavis_user_methods.rb and"
-        say "uncomment one of the approaches described there."
-
-        say "\nTo customize:"
-        say "  1. Edit app/models/concerns/clavis_user_methods.rb"
-        say "  2. Add required fields to the user creation in find_or_create_from_clavis"
-        say "  3. Handle password validation if your model uses has_secure_password"
-
-        say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
+        # The main instructions will be handled by install_generator.rb
+        # This is just a simple confirmation of what was done
+        say "\nClavis user methods have been added to your User model."
+        say "✅ Created app/models/concerns/clavis_user_methods.rb"
+        say "✅ Added 'include ClavisUserMethods' to your User model"
       end
     end
   end

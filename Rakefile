@@ -326,14 +326,62 @@ end
 
 begin
   require "brakeman"
-  desc "Run Brakeman"
-  task brakeman: :environment do
-    Brakeman.run(app_path: ".")
+  desc "Run Brakeman on the test Rails application"
+  task brakeman: :bootstrap_rails_app do
+    # Rails app path is guaranteed to exist because of the bootstrap_rails_app dependency
+    rails_app_path = File.join(File.dirname(__FILE__), "rails-app")
+
+    puts "Running Brakeman on rails-app to check Clavis integration"
+
+    # Use the ignore file to manage confirmed false positives only
+    # Keep this list as small as possible and document any entries
+    result = Brakeman.run(
+      app_path: rails_app_path,
+      ignore_file: ".brakeman.ignore"
+    )
+
+    if result.warnings.any?
+      puts "Brakeman found #{result.warnings.count} potential security issues."
+
+      # Still filter and highlight Clavis-specific warnings for visibility
+      clavis_warnings = result.warnings.select do |warning|
+        warning.file&.include?("clavis") ||
+          warning.message&.include?("clavis") ||
+          warning.code&.include?("clavis")
+      end
+
+      if clavis_warnings.any?
+        puts "#{clavis_warnings.count} warnings specifically related to Clavis code:"
+        clavis_warnings.each_with_index do |warning, index|
+          puts "#{index + 1}. [#{warning.confidence}] #{warning.warning_type} in #{warning.file}:#{warning.line}"
+          puts "   #{warning.message}"
+          puts ""
+        end
+      end
+
+      # Show all warnings in summary form
+      puts "\nAll warnings:"
+      result.warnings.each_with_index do |warning, index|
+        puts "#{index + 1}. [#{warning.confidence}] #{warning.warning_type} in #{warning.file}:#{warning.line}"
+        puts "   #{warning.message}"
+        puts ""
+      end
+
+      # Exit with failure unless warnings are explicitly allowed
+      exit 1 unless ENV["ALLOW_BRAKEMAN_WARNINGS"]
+    else
+      puts "Brakeman scan completed with no warnings."
+    end
   end
 rescue LoadError
   desc "Run Brakeman"
   task brakeman: :environment do
-    abort "Brakeman is not available. Run 'bundle install' first."
+    puts "Brakeman is not available. Please add it to your Gemfile or install it with:"
+    puts "  gem install brakeman"
+    puts ""
+    puts "Note: This task will fail if any security issues are found in the rails-app."
+    puts "To allow warnings and continue anyway, set ALLOW_BRAKEMAN_WARNINGS=1"
+    exit 1
   end
 end
 

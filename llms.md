@@ -1,300 +1,199 @@
-# Clavis: Large Language Model Documentation
+# Clavis: API Documentation for LLM Integration
 
-This document provides technical information about the Clavis gem for large language models.
+This document provides structured technical information about the Clavis gem for large language models and AI assistants. It's designed to be a comprehensive reference for automated code generation and assistance with Clavis OAuth integration.
 
-## Quick Start Guide for Implementation
+## Reference Index
 
-Implement Clavis in three steps:
+- [Quick Start](#quick-start-reference) - Minimal implementation steps
+- [Installation](#installation-details) - What the generator creates
+- [Configuration](#required-configuration) - Setting up providers
+- [User Creation](#critical-step-customize-user-creation) - Required customization
+- [Auth Routes](#core-routes) - Automatic route setup
+- [Auth Hash](#auth-hash-structure) - OAuth data structure
+- [Controllers](#controller-example) - Controller integration
+- [Views](#view-integration) - Button rendering
+- [Password Integration](#password-integration) - has_secure_password handling
+- [Providers](#available-providers) - Supported OAuth providers
+- [Custom Providers](#custom-provider-example) - Creating custom providers
+- [Error Handling](#common-errors-and-solutions) - Troubleshooting common issues
+- [Security](#security-features) - Security implementation details
+- [Environment Variables](#environment-variables-summary) - Required environment variables
+
+## Quick Start Reference
 
 ```ruby
 # Step 1: Add to Gemfile
 gem 'clavis'
-```
 
-```bash
-# Step 2: Run the installation generator
+# Step 2: Run installation
 rails generate clavis:install
 rails db:migrate
-```
 
-```ruby
-# Step 3: Configure a provider
+# Step 3: Configure provider
 Clavis.configure do |config|
   config.providers = {
     github: {
       client_id: ENV["GITHUB_CLIENT_ID"],
-      client_secret: ENV["GITHUB_CLIENT_SECRET"]
+      client_secret: ENV["GITHUB_CLIENT_SECRET"],
+      redirect_uri: "https://your-app.com/auth/github/callback"
     }
   }
-  
-  # Optional: Customize the path (default is '/auth/:provider/callback')
-  # config.default_callback_path = '/oauth/:provider/callback'
 end
+
+# Step 4: Add button to view
+<%= clavis_oauth_button :github %>
+
+# Step 5: CRITICAL - Customize user creation
+# Edit app/models/concerns/clavis_user_methods.rb
 ```
 
-### What the Generator Does
+## Installation Details
 
+The generator automatically:
 1. Creates migrations for OAuth identities
 2. Mounts the engine at `/auth` 
 3. Creates configuration initializer
 4. Adds `Clavis::Models::OauthAuthenticatable` to User model
+5. Creates a ClavisUserMethods concern for user creation
 
-Add a button to your view:
+### Required Configuration
 
-```erb
-<%= clavis_oauth_button :github %>
+```ruby
+# config/initializers/clavis.rb
+Clavis.configure do |config|
+  config.providers = {
+    google: {
+      client_id: ENV["GOOGLE_CLIENT_ID"],
+      client_secret: ENV["GOOGLE_CLIENT_SECRET"],
+      redirect_uri: "https://your-app.com/auth/google/callback"
+    }
+  }
+end
 ```
 
-### Important Notes
+### Auth Callback URI Configuration
 
-1. Use the standard ERB syntax with `<%= %>` for OAuth buttons - the helper returns html_safe content
-2. The gem automatically handles route setup when mounted at `/auth` - no additional route configuration needed
-3. Always use the complete callback URI in provider configuration (e.g., `https://your-app.com/auth/github/callback`)
-4. If you customize the mount path, make sure to update the `default_callback_path` configuration accordingly
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Architecture](#architecture)
-3. [Core Components](#core-components)
-4. [Implementation Details](#implementation-details)
-5. [Usage Examples](#usage-examples)
-6. [Customization Guide](#customization-guide)
-7. [Error Handling](#error-handling)
-8. [Security Considerations](#security-considerations)
-9. [API Reference](#api-reference)
-10. [Rate Limiting](#rate-limiting)
-
-## Overview
-
-Clavis implements OAuth 2.0 and OpenID Connect (OIDC) for Rails. It focuses on "Sign in with ____" functionality while maintaining security standards.
-
-### Key Assumptions
-
-1. Rails 7+ application
-2. Existing User model and authentication
-3. Speed over detailed configuration
-
-## Architecture
-
-### Core Components
-
-1. **Configuration System** - Stores provider settings and validates configuration
-2. **Provider Framework** - Implements OAuth/OIDC flows with provider-specific logic
-3. **Authentication Flow** - Handles requests and callbacks with CSRF protection
-4. **User Management** - Maps OAuth responses to user records
-5. **View Components** - Button helpers with provider-specific styling
-6. **Rails Integration** - Routes, generators, and existing auth integration
-
-## Implementation Details
-
-### Callback URI Format
-
-Always use the complete callback URI:
+Always use the complete callback URI in both Clavis config and provider developer console:
 
 ```
 https://your-domain.com/auth/:provider/callback
 ```
 
-Common mistake: Using just the domain without the full path.
+Common error: `redirect_uri_mismatch` - caused by URI mismatch between your code and provider console settings.
 
-### Route Structure
-
-The Clavis engine is mounted at `/auth` by default, which creates these routes:
+### Core Routes
 
 ```
-/auth/google                - Start Google OAuth flow
-/auth/google/callback       - Handle Google OAuth callback
-/auth/:provider             - Generic provider route
-/auth/:provider/callback    - Generic callback route
+/auth/:provider             - Initiates OAuth flow
+/auth/:provider/callback    - Handles OAuth callback
 ```
 
-These routes are automatically registered when you mount the engine:
+These routes are automatically registered via:
 
 ```ruby
 # config/routes.rb (added by generator)
 mount Clavis::Engine => "/auth"
 ```
 
-#### Customizing the Path
+## Critical Step: Customize User Creation
 
-You can customize the path in two ways:
-
-1. **Change the engine mount point**:
-```ruby
-# config/routes.rb
-mount Clavis::Engine => "/oauth"
-```
-
-2. **Update the callback path configuration**:
-```ruby
-# config/initializers/clavis.rb
-Clavis.configure do |config|
-  # This should match your engine mount point
-  config.default_callback_path = "/oauth/:provider/callback"
-end
-```
-
-When customizing paths, make sure that:
-1. The provider configuration's redirect URIs match your custom paths
-2. Both the engine mount point and the `default_callback_path` are updated consistently
-
-### OAuth Flow Implementation
-
-1. **Authorization Request**
-```ruby
-def authorize_url(state:, nonce:, scope:)
-  params = {
-    response_type: "code",
-    client_id: client_id,
-    redirect_uri: redirect_uri,
-    scope: scope || default_scopes,
-    state: state
-  }
-  
-  # Add nonce for OIDC
-  params[:nonce] = nonce if openid_scope?(scope)
-  
-  "#{authorization_endpoint}?#{params.to_query}"
-end
-```
-
-2. **Authorization Callback**
-```ruby
-def oauth_callback
-  validate_state!(params[:state])
-  auth_hash = provider.process_callback(params[:code], session.delete(:oauth_state))
-  user = find_or_create_user_from_oauth(auth_hash)
-  yield(user, auth_hash) if block_given?
-end
-```
-
-3. **Token Exchange**
-```ruby
-def token_exchange(code:, expected_state: nil)
-  response = http_client.post(token_endpoint, {
-    grant_type: "authorization_code",
-    code: code,
-    redirect_uri: redirect_uri,
-    client_id: client_id,
-    client_secret: client_secret
-  })
-  
-  handle_token_response(response)
-end
-```
-
-### Provider Example: Google
+You MUST customize the user creation code to include all required fields for your User model:
 
 ```ruby
-class Google < Base
-  def authorization_endpoint
-    "https://accounts.google.com/o/oauth2/v2/auth"
-  end
+# app/models/concerns/clavis_user_methods.rb
+def find_or_create_from_clavis(auth_hash)
+  # First try to find existing identity...
   
-  def token_endpoint
-    "https://oauth2.googleapis.com/token"
-  end
-  
-  def userinfo_endpoint
-    "https://openidconnect.googleapis.com/v1/userinfo"
-  end
-  
-  def default_scopes
-    "openid email profile"
-  end
-  
-  def openid_provider?
-    true
-  end
-  
-  protected
-  
-  def process_userinfo_response(response)
-    data = JSON.parse(response.body)
+  # Create new user if none exists
+  if user.nil?
+    # Convert to HashWithIndifferentAccess for reliable key access
+    info = auth_hash[:info].with_indifferent_access if auth_hash[:info]
     
-    # For OpenID Connect providers like Google, we use the sub claim
-    # as the stable identifier. This is guaranteed to be unique and
-    # consistent for each user, unlike other fields that might change.
-    {
-      provider: "google",
-      uid: data["sub"], # sub is the stable identifier
-      info: {
-        email: data["email"],
-        name: data["name"],
-        image: data["picture"]
-      }
-    }
+    user = new(
+      email: info&.dig(:email),
+      # Add your required User model fields here:
+      first_name: info&.dig(:given_name) || info&.dig(:first_name),
+      last_name: info&.dig(:family_name) || info&.dig(:last_name),
+      username: info&.dig(:nickname) || "user_#{SecureRandom.hex(4)}",
+      avatar_url: info&.dig(:picture) || info&.dig(:image),
+      terms_accepted: true  # For required boolean fields
+    )
+    
+    # Mark this user for password validation skipping
+    user.skip_password_validation = true
+    user.save!
   end
+  
+  # Create identity and return user...
 end
 ```
 
-### OpenID Connect vs OAuth2 Providers
+## Auth Hash Structure
 
-Clavis handles two types of providers differently:
-
-1. **OpenID Connect Providers** (e.g., Google)
-   - Uses the `sub` claim as the stable identifier
-   - This is guaranteed to be unique and consistent
-   - Found in the ID token claims or userinfo response
-   - Example: Google's `sub` is a stable numeric identifier
-
-2. **OAuth2-only Providers** (e.g., GitHub)
-   - Uses the provider's `uid` field
-   - Identifier format varies by provider
-   - Example: GitHub uses the user's numeric ID
-
-When implementing a custom provider, use `openid_provider?` to indicate if it's an OpenID Connect provider:
+The `auth_hash` contains standardized OAuth data from providers:
 
 ```ruby
-def openid_provider?
-  true # for OIDC providers
-  false # for OAuth2-only providers
-end
-```
-
-## Usage Examples
-
-### Basic Setup
-
-```ruby
-# Gemfile
-gem 'clavis'
-
-# Terminal
-bundle install
-rails g clavis:install
-
-# config/initializers/clavis.rb
-Clavis.configure do |config|
-  config.providers = {
-    google: {
-      client_id: Rails.application.credentials.dig(:google, :client_id),
-      client_secret: Rails.application.credentials.dig(:google, :client_secret),
-      redirect_uri: "https://example.com/auth/google/callback"
+{
+  provider: "google",        # Provider name (string)
+  uid: "123456789",          # Unique user ID (string)
+  
+  info: {                    # User information
+    email: "user@example.com",
+    email_verified: true,    # Only from OIDC providers
+    name: "John Doe",
+    given_name: "John",      # From Google/OIDC
+    family_name: "Doe",      # From Google/OIDC
+    first_name: "John",      # From some OAuth2 providers
+    last_name: "Doe",        # From some OAuth2 providers
+    nickname: "johndoe",     # Usually from GitHub
+    picture: "https://...",  # From Google/OIDC
+    image: "https://...",    # From OAuth2 providers
+    urls: {                  # Provider-specific profile URLs
+      website: "https://...",
+      profile: "https://..."
     }
+  },
+  
+  credentials: {             # OAuth tokens
+    token: "ACCESS_TOKEN",
+    refresh_token: "REFRESH_TOKEN",
+    expires_at: 1494520494,  # Unix timestamp
+    expires: true            # Whether token expires
+  },
+  
+  id_token_claims: {         # OpenID Connect claims (Google, Microsoft)
+    sub: "123456789",        # Stable unique identifier
+    email: "user@example.com",
+    email_verified: true,
+    name: "John Doe",
+    picture: "https://..."
+  },
+  
+  extra: {                   # Additional provider data
+    raw_info: { /* Raw provider response */ }
   }
-end
-
-# app/models/user.rb
-class User < ApplicationRecord
-  include Clavis::Models::OauthAuthenticatable
-end
+}
 ```
 
 ### Accessing User Info
 
 ```ruby
-# Get user info from most recent OAuth provider
+# Get info from most recent OAuth provider
 user.oauth_email       # => "user@example.com"
 user.oauth_name        # => "John Doe"
 user.oauth_avatar_url  # => "https://example.com/avatar.jpg"
 
 # Get info from specific provider
 user.oauth_email("google")
+user.oauth_name("github")
+
+# Check if OAuth user
+user.oauth_user?       # => true/false
 ```
 
-### Controller Integration
+## Provider Integration Examples
+
+### Controller Example
 
 ```ruby
 class SessionsController < ApplicationController
@@ -306,7 +205,7 @@ class SessionsController < ApplicationController
       redirect_to dashboard_path
     end
   rescue Clavis::AuthenticationError => e
-    redirect_to login_path, alert: "Authentication failed"
+    redirect_to login_path, alert: "Authentication failed: #{e.message}"
   end
 end
 ```
@@ -314,98 +213,163 @@ end
 ### View Integration
 
 ```erb
-<div class="oauth-providers">
-  <%= clavis_oauth_button :google %>
-  <%= clavis_oauth_button :github %>
-  <%= clavis_oauth_button :apple %>
-</div>
-```
+<!-- Basic buttons -->
+<%= clavis_oauth_button :google %>
+<%= clavis_oauth_button :github %>
 
-Include view helpers:
-
-```ruby
-# app/helpers/oauth_helper.rb
-module OauthHelper
-  include Clavis::ViewHelpers
-end
-```
-
-### Customizing Button Display
-
-Clavis OAuth buttons can be customized with several options:
-
-```erb
-<!-- Custom text -->
+<!-- Customized buttons -->
 <%= clavis_oauth_button :google, text: "Continue with Google" %>
-
-<!-- Custom CSS class -->
 <%= clavis_oauth_button :github, class: "my-custom-button" %>
-
-<!-- Custom HTML attributes -->
 <%= clavis_oauth_button :apple, html: { data: { turbo: false } } %>
 ```
 
-The buttons are rendered with HTML-safe content, so you can use the standard ERB output tag `<%= %>` without extra escaping.
+## Available Providers
 
-## Customization Guide
+| Provider   | Key        | Scopes                | Identifier Strategy   | Notes |
+|------------|------------|------------------------|----------------------|-------|
+| Google     | `:google`  | `openid email profile` | OIDC `sub` claim     | Full OIDC support |
+| GitHub     | `:github`  | `user:email`           | OAuth2 `uid`         | Uses GitHub API |
+| Apple      | `:apple`   | `name email`           | OIDC `sub` claim     | JWT client secret |
+| Facebook   | `:facebook`| `email public_profile` | OAuth2 `uid`         | Uses Graph API |
+| Microsoft  | `:microsoft`| `openid email profile` | OIDC `sub` claim     | Multi-tenant support |
 
-### Adding a Custom Provider
+## Password Integration
+
+For User models with `has_secure_password`, handle password validation:
 
 ```ruby
-class CustomProvider < Base
+# app/models/user.rb
+class User < ApplicationRecord
+  include ClavisUserMethods
+  has_secure_password
+  
+  # Option 1: Skip validation for OAuth users (recommended)
+  validates :password, presence: true, 
+    unless: -> { skip_password_validation }, on: :create
+    
+  # Option 2: Set random password for OAuth users
+  before_validation :set_random_password,
+    if: -> { skip_password_validation && respond_to?(:password=) }
+    
+  private
+  
+  def set_random_password
+    self.password = SecureRandom.hex(16)
+    self.password_confirmation = password if respond_to?(:password_confirmation=)
+  end
+end
+```
+
+## Common Errors and Solutions
+
+| Error | Cause | Solution | Code Example |
+|-------|-------|----------|--------------|
+| `redirect_uri_mismatch` | URI in code doesn't match provider console | Make URIs identical (protocol, domain, port, path) | Check both provider config and console settings |
+| `invalid_client` | Client ID/secret incorrect | Check provider credentials in config | Verify ENV variables are correctly set |
+| `User validation failed` | Required fields missing | Customize user creation with required fields | See [User Creation](#critical-step-customize-user-creation) |
+| `Password can't be blank` | Password validation for OAuth users | Implement validation skipping for OAuth users | See [Password Integration](#password-integration) |
+| `unknown provider` | Provider not configured | Add provider to configuration | Add to `config.providers` hash |
+| `undefined method user for nil` | OAuth identity not associated with user | Fix user creation process | Check `find_or_create_from_clavis` implementation |
+
+## Error Handling Implementation
+
+```ruby
+# In your controllers
+def oauth_callback
+  begin
+    # Standard OAuth flow
+    auth_hash = process_callback(params[:provider])
+    user = User.find_or_create_from_clavis(auth_hash)
+    sign_in_user(user)
+    redirect_to after_sign_in_path
+  rescue Clavis::Error => e
+    case e.message
+    when /redirect_uri_mismatch/
+      redirect_to sign_in_path, alert: "OAuth configuration error. Please contact support."
+    when /invalid_client/
+      redirect_to sign_in_path, alert: "Authentication service unavailable."
+    when /unknown provider/
+      redirect_to sign_in_path, alert: "This login method is not available."
+    else
+      redirect_to sign_in_path, alert: "Authentication failed: #{e.message}"
+    end
+  end
+end
+```
+
+## Custom Provider Example
+
+```ruby
+# config/initializers/clavis.rb
+class CustomProvider < Clavis::Providers::Base
   def authorization_endpoint
-    "https://custom-provider.com/oauth/authorize"
+    "https://auth.custom-provider.com/oauth/authorize"
   end
   
   def token_endpoint
-    "https://custom-provider.com/oauth/token"
+    "https://auth.custom-provider.com/oauth/token"
   end
   
   def userinfo_endpoint
-    "https://custom-provider.com/api/user"
-  end
-end
-
-# Register the provider
-Clavis.register_provider(:custom_provider, CustomProvider)
-```
-
-### Custom Claims Processing
-
-```ruby
-config.claims_processor = proc do |auth_hash, user|
-  # Set verified email if from Google
-  if auth_hash[:provider] == "google" && auth_hash[:info][:email_verified]
-    user.verified_email = true
+    "https://api.custom-provider.com/userinfo"
   end
   
-  # Add role based on email domain
-  if auth_hash[:info][:email].end_with?("@mycompany.com")
-    user.add_role(:employee)
+  def default_scopes
+    "email profile"
   end
+  
+  def openid_provider?
+    false  # true for OIDC providers
+  end
+end
+
+# Register provider
+Clavis.register_provider(:custom_provider, CustomProvider)
+
+# Configure provider
+Clavis.configure do |config|
+  config.providers = {
+    custom_provider: {
+      client_id: ENV["CUSTOM_CLIENT_ID"],
+      client_secret: ENV["CUSTOM_CLIENT_SECRET"],
+      redirect_uri: "https://your-app.com/auth/custom_provider/callback"
+    }
+  }
 end
 ```
 
-## Security Considerations
+## OpenID Connect vs OAuth2
 
-Clavis implements several security features:
+| Feature | OIDC Providers (Google, Microsoft, Apple) | OAuth2 Providers (GitHub, Facebook) |
+|---------|-------------------------------------------|-------------------------------------|
+| User identifier | `sub` claim (stable, guaranteed unique) | `uid` field (provider-specific) |
+| Email verification | Provides `email_verified` claim | Usually not available |
+| User info format | Standardized claims | Varies by provider |
+| ID tokens | Provides JWT ID tokens | Not available |
+| Access method | `auth_hash[:id_token_claims][:sub]` | `auth_hash[:uid]` |
+| Example providers | Google, Microsoft, Apple | GitHub, Facebook |
 
-1. **State Parameter** - Prevents CSRF attacks
-2. **Nonce Parameter** - Prevents replay attacks for OIDC
-3. **HTTPS** - Required for OAuth operations
-4. **Secure Token Storage** - Encrypted in database
-5. **Error Logging** - Security events monitoring
+## Security Features
 
-### Rate Limiting
+| Feature | Implementation | Purpose |
+|---------|---------------|---------|
+| CSRF Protection | State parameter | Prevents cross-site request forgery |
+| Replay Prevention | Nonce parameter | Prevents token replay attacks |
+| Transport Security | HTTPS requirement | Ensures secure data transmission |
+| Token Encryption | Database encryption | Protects stored tokens |
+| Rate Limiting | Request throttling | Protects against brute force/DDoS |
 
-Clavis integrates with Rack::Attack to protect OAuth endpoints against DDoS and brute force attacks.
+### Rate Limiting Configuration
 
 ```ruby
-# Rate limiting is enabled by default
+# Enabled by default with these rate limits:
+# - Auth endpoints: 20 requests/minute per IP
+# - Callback endpoints: 15 requests/minute per IP
+# - Login attempts: 5 requests/20 seconds per email
+
+# Custom configuration
 Clavis.configure do |config|
   config.rate_limiting_enabled = true
-  
-  # Optional: Configure custom throttles
   config.custom_throttles = {
     "login_page": {
       limit: 30,
@@ -416,72 +380,17 @@ Clavis.configure do |config|
 end
 ```
 
-#### Default Rate Limits
+## Environment Variables Summary
 
-By default, Clavis applies these rate limits:
-
-1. **Authorization Endpoints**: 20 requests per minute per IP address
-2. **Callback Endpoints**: 15 requests per minute per IP address
-3. **Login Attempts by Email**: 5 requests per 20 seconds per email address
-
-#### Integration Details
-
-1. Clavis uses Rack::Attack middleware
-2. Rate limiting is automatically configured when the gem is loaded
-3. No additional gem installation required (Rack::Attack is a dependency)
-4. Uses Rails cache for throttle storage by default
-
-#### Custom Configuration
-
-For advanced customization, create a dedicated Rack::Attack configuration:
-
-```ruby
-# config/initializers/rack_attack.rb
-Rack::Attack.throttle("custom/auth", limit: 10, period: 30.seconds) do |req|
-  req.ip if req.path =~ %r{/auth/}
-end
-
-# Dedicated cache store for rate limiting
-Rack::Attack.cache.store = ActiveSupport::Cache::RedisCacheStore.new(
-  url: ENV["REDIS_RATE_LIMIT_URL"]
-)
-```
-
-#### Implementation Notes
-
-1. Rate limiting middleware installation happens in `Clavis::Engine`
-2. Throttle rules are defined in `Clavis::Security::RateLimiter`
-3. Configuration via `rate_limiting_enabled` and `custom_throttles` in Clavis config
-4. When disabled, no middleware is added and there's zero performance impact
-
-## API Reference
-
-### Available Providers
-
-| Provider | Key | Default Scopes | Notes |
-|----------|-----|----------------|-------|
-| Google | `:google` | `openid email profile` | Full OIDC support |
-| GitHub | `:github` | `user:email` | Uses GitHub API |
-| Apple | `:apple` | `name email` | JWT client secret |
-| Facebook | `:facebook` | `email public_profile` | Uses Graph API |
-| Microsoft | `:microsoft` | `openid email profile` | Multi-tenant |
-
-### Auth Hash Structure
-
-```ruby
-{
-  provider: "google",
-  uid: "123456789",
-  info: {
-    email: "user@example.com",
-    email_verified: true,
-    name: "John Doe",
-    image: "https://example.com/photo.jpg"
-  },
-  credentials: {
-    token: "ACCESS_TOKEN",
-    refresh_token: "REFRESH_TOKEN",
-    expires_at: 1494520494
-  }
-}
-``` 
+| Variable | Purpose | Format | Required |
+|----------|---------|--------|----------|
+| GOOGLE_CLIENT_ID | Google OAuth | String | For Google auth |
+| GOOGLE_CLIENT_SECRET | Google OAuth | String | For Google auth |
+| GITHUB_CLIENT_ID | GitHub OAuth | String | For GitHub auth |
+| GITHUB_CLIENT_SECRET | GitHub OAuth | String | For GitHub auth |
+| APPLE_CLIENT_ID | Apple OAuth | String | For Apple auth |
+| APPLE_CLIENT_SECRET | Apple OAuth | JWT/PEM | For Apple auth |
+| FACEBOOK_CLIENT_ID | Facebook OAuth | String | For Facebook auth |
+| FACEBOOK_CLIENT_SECRET | Facebook OAuth | String | For Facebook auth |
+| MICROSOFT_CLIENT_ID | Microsoft OAuth | String | For Microsoft auth |
+| MICROSOFT_CLIENT_SECRET | Microsoft OAuth | String | For Microsoft auth | 
