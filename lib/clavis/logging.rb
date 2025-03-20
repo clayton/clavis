@@ -91,6 +91,14 @@ module Clavis
         log("Hosted domain verification for #{provider}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
       end
 
+      # Log custom operation results
+      # @param operation [String] The name of the operation
+      # @param success [Boolean] Whether the operation was successful
+      # @param details [String, nil] Optional details about the operation
+      def log_custom(operation, success, details = nil)
+        log("#{operation}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
+      end
+
       private
 
       # Filter potentially sensitive data from log messages

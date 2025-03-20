@@ -488,6 +488,66 @@ When setting up OAuth, correctly configuring redirect URIs in both your app and 
 - **Error 400: redirect_uri_mismatch** - This means the URI in your code doesn't match what's registered in the provider's console
 - **Solution**: Ensure both URIs match exactly, including protocol (http/https), domain, port, and full path
 
+#### Facebook
+1. Go to [Facebook Developer Portal](https://developers.facebook.com)
+2. Create or select a Facebook app
+3. Navigate to Settings > Basic to find your App ID and App Secret
+4. Set up "Facebook Login" and configure "Valid OAuth Redirect URIs" with the exact URI from your Clavis config:
+   - For development: `http://localhost:3000/auth/facebook/callback`
+   - For production: `https://your-app.com/auth/facebook/callback`
+
+### Provider Configuration Options
+
+Providers can be configured with additional options for customizing behavior:
+
+#### Facebook Provider Options
+
+```ruby
+config.providers = {
+  facebook: {
+    client_id: ENV["FACEBOOK_CLIENT_ID"],
+    client_secret: ENV["FACEBOOK_CLIENT_SECRET"],
+    redirect_uri: "https://your-app.com/auth/facebook/callback",
+    # Optional settings:
+    display: "popup",               # Display mode - options: page, popup, touch
+    auth_type: "rerequest",         # Auth type - useful for permission re-requests
+    image_size: "large",            # Profile image size - small, normal, large, square
+    # Alternative: provide exact dimensions
+    image_size: { width: 200, height: 200 },
+    secure_image_url: true          # Force HTTPS for image URLs (default true)
+  }
+}
+```
+
+| Option | Description | Values | Default |
+|--------|-------------|--------|---------|
+| `display` | Controls how the authorization dialog is displayed | `page`, `popup`, `touch` | `page` |
+| `auth_type` | Specifies the auth flow behavior | `rerequest`, `reauthenticate` | N/A |
+| `image_size` | Profile image size | String: `small`, `normal`, `large`, `square` or Hash: `{ width: 200, height: 200 }` | N/A |
+| `secure_image_url` | Force HTTPS for profile image URLs | `true`, `false` | `true` |
+
+#### Using Facebook Long-Lived Tokens
+
+Facebook access tokens are short-lived by default. The Facebook provider includes methods to exchange these for long-lived tokens:
+
+```ruby
+# Exchange a short-lived token for a long-lived token
+provider = Clavis.provider(:facebook)
+long_lived_token_data = provider.exchange_for_long_lived_token(oauth_identity.access_token)
+
+# Update the OAuth identity with the new token
+oauth_identity.update(
+  access_token: long_lived_token_data[:access_token],
+  expires_at: Time.now + long_lived_token_data[:expires_in].to_i.seconds
+)
+```
+
+#### Common Errors
+
+- **Error 400: Invalid OAuth access token** - The token is invalid or expired
+- **Error 400: redirect_uri does not match** - Mismatch between registered and provided redirect URI
+- **Solution**: Ensure the redirect URI in your code matches exactly what's registered in Facebook Developer Portal
+
 ## Security & Rate Limiting
 
 Clavis includes built-in integration with the [Rack::Attack](https://github.com/rack/rack-attack) gem to protect your OAuth endpoints against DDoS and brute force attacks.
