@@ -96,8 +96,6 @@ module Clavis
       config = config.merge(options)
 
       provider_class.new(config)
-    rescue StandardError
-      raise
     end
 
     def register_provider(name, provider_class)
