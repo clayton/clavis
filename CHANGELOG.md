@@ -4,13 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.2] - 2025-03-20
+
+### Added
+- Added Brakeman security scanning integration for test Rails application
+- Added `.brakeman.ignore` file for managing false positives
+- Added improved error handling code examples to llms.md
+
+### Changed
+- Enhanced installation generator output with better organization and visual structure
+- Reorganized README.md for improved logical flow and readability
+- Optimized llms.md for better AI consumption with structured data formats
+- Updated documentation to be more consistent across files
+
 ### Fixed
 - Fixed HTML escaping issue in `clavis_oauth_button` helper so it works properly with `<%= %>` without requiring `<%== %>`
 - Fixed routing for OAuth providers by respecting configured callback paths instead of hardcoding `/auth/`
 - Improved button rendering to handle different engine mount points and configurations
-- Improved documentation to clarify how OAuth buttons and routes work with the engine
 
-## [0.6.8] - 2024-03-20
+## [0.7.1] - 2025-03-20
 
 ### Fixed
 - Fixed route conflict issues in engine mounting
@@ -20,14 +32,14 @@ All notable changes to this project will be documented in this file.
 - Updated Rails test app to use the built-in Rails 8 authentication generator
 - Removed oauth_button legacy alias in favor of clavis_oauth_button
 
-## [0.6.7] - 2024-03-19
+## [0.7.0] - 2025-03-19
 
 ### Fixed
 - Fixed bcrypt dependency for test Rails application in CI
 - Improved dependency management in test environment
 - Added explicit bcrypt installation to prevent authentication failures
 
-## [0.6.6] - 2024-03-19
+## [0.6.9] - 2025-03-19
 
 ### Fixed
 - Fixed CI issues with Rails application testing
@@ -35,7 +47,7 @@ All notable changes to this project will be documented in this file.
 - Enhanced Rails generator tests to handle bootsnap dependency
 - Added automatic fixes for common Rails initialization issues
 
-## [0.6.0] - 2024-05-10
+## [0.6.0] - 2025-03-10
 
 ### Added
 - Added `oauth_user?` method to `OauthAuthenticatable` concern to easily check if a user has any OAuth identities
@@ -46,18 +58,18 @@ All notable changes to this project will be documented in this file.
 - Improved documentation on route setup and OAuth integration
 - Added Quick Start guides to README and LLMs documentation
 
-## [0.5.2] - 2023-03-18
+## [0.5.2] - 2025-03-18
 
 ### Changed
 - Removed unnecessary bigdecimal and mutex_m dependencies
 
-## [0.5.1] - 2023-03-18
+## [0.5.1] - 2025-03-18
 
 ### Fixed
 - Updated release workflow to use Ruby 3.3
 - Fixed RuboCop target Ruby version to match required version
 
-## [0.5.0] - 2023-03-18
+## [0.5.0] - 2025-03-18
 
 ### Changed
 - Updated to require Rails 8.0 only
@@ -65,14 +77,14 @@ All notable changes to this project will be documented in this file.
 - Removed support for Rails 7.x
 - Simplified serialization code now that we only support Rails 8.0+
 
-## [0.3.4] - 2023-03-18
+## [0.3.4] - 2025-03-18
 
 ### Fixed
 - Resolved compatibility issues with Rails 8 eager loading
 - Fixed timezone handling in OauthIdentity expirations
 - Added test coverage for Rails 8.0 and Ruby 3.4
 
-## [0.3.1] - 2023-03-19
+## [0.3.1] - 2025-03-19
 
 ### Added
 - Improved provider buttons with proper branding according to each provider's guidelines
@@ -85,7 +97,7 @@ All notable changes to this project will be documented in this file.
 - Refined the display of button icons and text for better alignment
 - Updated the README to clarify information about button styling options
 
-## [0.3.0] - 2023-03-18
+## [0.3.0] - 2025-03-18
 
 ### Added
 - Standardized user information extraction from all OAuth providers
@@ -93,7 +105,7 @@ All notable changes to this project will be documented in this file.
 - Helper methods on User model via OauthAuthenticatable: `oauth_email`, `oauth_name`, and `oauth_avatar_url`
 - Storage of standardized user info in the auth_data JSON field
 
-## [0.2.3] - 2023-03-25
+## [0.2.3] - 2025-03-25
 
 ### Fixed
 - Added missing `process_callback` method to Provider::Base class for handling OAuth callbacks
@@ -102,13 +114,13 @@ All notable changes to this project will be documented in this file.
 - Made token and userinfo validation more permissive to work with various OAuth provider responses
 - Added comprehensive integration tests for the OAuth callback flow
 
-## [0.2.2] - 2023-03-19
+## [0.2.2] - 2025-03-19
 
 ### Fixed
 - Added `allow_other_host: true` to OAuth redirects to fix `ActionController::Redirecting::UnsafeRedirectError` errors in Rails 7
 - This ensures compatibility with stricter cross-origin redirect security in newer Rails versions
 
-## [0.2.1] - 2023-03-18
+## [0.2.1] - 2025-03-18
 
 ### Changed
 - Namespaced view helper methods to prevent conflicts with Rails form helpers
@@ -121,7 +133,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Conflicts between Clavis view helpers and Rails form helpers when using `form_with`
 
-## [0.2.0] - 2023-03-17
+## [0.2.0] - 2025-03-17
 
 ### Fixed
 - Module name inconsistency between `Clavis::Models::OauthAuthenticatable` and `Clavis::Models::Concerns::OauthAuthenticatable`
