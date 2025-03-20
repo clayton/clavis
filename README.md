@@ -483,10 +483,36 @@ When setting up OAuth, correctly configuring redirect URIs in both your app and 
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Navigate to "OAuth Apps" and create or edit your app
 3. In the "Authorization callback URL" field, add exactly the same URI as in your Clavis config
+   - For development: `http://localhost:3000/auth/github/callback`
+   - For production: `https://your-app.com/auth/github/callback`
 
 #### Common Errors
 - **Error 400: redirect_uri_mismatch** - This means the URI in your code doesn't match what's registered in the provider's console
 - **Solution**: Ensure both URIs match exactly, including protocol (http/https), domain, port, and full path
+
+#### GitHub Enterprise Support
+
+Clavis supports GitHub Enterprise installations with custom configuration options:
+
+```ruby
+config.providers = {
+  github: {
+    client_id: ENV["GITHUB_CLIENT_ID"],
+    client_secret: ENV["GITHUB_CLIENT_SECRET"],
+    redirect_uri: "https://your-app.com/auth/github/callback",
+    # GitHub Enterprise settings:
+    site_url: "https://api.github.yourdomain.com",           # Your Enterprise API endpoint
+    authorize_url: "https://github.yourdomain.com/login/oauth/authorize",
+    token_url: "https://github.yourdomain.com/login/oauth/access_token"
+  }
+}
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `site_url` | Base URL for the GitHub API | `https://api.github.com` |
+| `authorize_url` | Authorization endpoint URL | `https://github.com/login/oauth/authorize` |
+| `token_url` | Token exchange endpoint URL | `https://github.com/login/oauth/access_token` |
 
 #### Facebook
 1. Go to [Facebook Developer Portal](https://developers.facebook.com)

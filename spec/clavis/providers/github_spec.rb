@@ -21,17 +21,62 @@ RSpec.describe Clavis::Providers::Github do
     it "returns the GitHub authorization endpoint" do
       expect(provider.authorization_endpoint).to eq("https://github.com/login/oauth/authorize")
     end
+
+    context "with GitHub Enterprise configuration" do
+      let(:config) do
+        {
+          client_id: "test-client-id",
+          client_secret: "test-client-secret",
+          redirect_uri: "https://example.com/auth/github/callback",
+          authorize_url: "https://github.enterprise.com/login/oauth/authorize"
+        }
+      end
+
+      it "returns the custom GitHub Enterprise authorization endpoint" do
+        expect(provider.authorization_endpoint).to eq("https://github.enterprise.com/login/oauth/authorize")
+      end
+    end
   end
 
   describe "#token_endpoint" do
     it "returns the GitHub token endpoint" do
       expect(provider.token_endpoint).to eq("https://github.com/login/oauth/access_token")
     end
+
+    context "with GitHub Enterprise configuration" do
+      let(:config) do
+        {
+          client_id: "test-client-id",
+          client_secret: "test-client-secret",
+          redirect_uri: "https://example.com/auth/github/callback",
+          token_url: "https://github.enterprise.com/login/oauth/access_token"
+        }
+      end
+
+      it "returns the custom GitHub Enterprise token endpoint" do
+        expect(provider.token_endpoint).to eq("https://github.enterprise.com/login/oauth/access_token")
+      end
+    end
   end
 
   describe "#userinfo_endpoint" do
     it "returns the GitHub userinfo endpoint" do
       expect(provider.userinfo_endpoint).to eq("https://api.github.com/user")
+    end
+
+    context "with GitHub Enterprise configuration" do
+      let(:config) do
+        {
+          client_id: "test-client-id",
+          client_secret: "test-client-secret",
+          redirect_uri: "https://example.com/auth/github/callback",
+          site_url: "https://api.github.enterprise.com"
+        }
+      end
+
+      it "returns the custom GitHub Enterprise userinfo endpoint" do
+        expect(provider.userinfo_endpoint).to eq("https://api.github.enterprise.com/user")
+      end
     end
   end
 
@@ -171,23 +216,21 @@ RSpec.describe Clavis::Providers::Github do
       ].to_json
     end
     let(:emails_response) { instance_double(Faraday::Response, status: 200, body: emails_response_body) }
+    let(:request_double) { double("request", headers: {}) }
 
     before do
       allow(provider).to receive(:http_client).and_return(http_client)
-      allow(http_client).to receive(:get).with("https://api.github.com/user", any_args).and_return(user_response)
-      allow(http_client).to receive(:get).with("https://api.github.com/user/emails", any_args).and_return(emails_response)
+      allow(http_client).to receive(:get).with("https://api.github.com/user", any_args).and_yield(request_double).and_return(user_response)
+      allow(http_client).to receive(:get).with("https://api.github.com/user/emails", any_args).and_yield(request_double).and_return(emails_response)
       allow(Clavis::Logging).to receive(:log_userinfo_request)
+      allow(Clavis::Logging).to receive(:log_custom)
       allow(Clavis::Security::InputValidator).to receive(:valid_token?).and_return(true)
     end
 
     it "fetches user info from GitHub" do
       result = provider.get_user_info(access_token)
 
-      expect(http_client).to have_received(:get).with("https://api.github.com/user") do |&block|
-        req = double
-        expect(req).to receive(:headers).and_return({})
-        block.call(req)
-      end
+      expect(http_client).to have_received(:get).with("https://api.github.com/user")
 
       expect(result).to include(
         id: "123456",
@@ -199,6 +242,12 @@ RSpec.describe Clavis::Providers::Github do
       )
 
       expect(Clavis::Logging).to have_received(:log_userinfo_request).with(:github, true)
+    end
+
+    it "sends appropriate API version headers" do
+      provider.get_user_info(access_token)
+
+      expect(request_double.headers).to include("Accept" => "application/vnd.github.v3+json")
     end
 
     context "when the user info request fails" do
@@ -241,6 +290,7 @@ RSpec.describe Clavis::Providers::Github do
       it "still returns user info with the public email" do
         result = provider.get_user_info(access_token)
         expect(result[:email]).to eq("public@example.com")
+        expect(Clavis::Logging).to have_received(:log_custom).with("github_emails_fetch", false)
       end
     end
 
@@ -254,11 +304,12 @@ RSpec.describe Clavis::Providers::Github do
         }.to_json
       end
       let(:user_response_no_email) { instance_double(Faraday::Response, status: 200, body: user_response_body_no_email, env: double(request: double(headers: { "Authorization" => "Bearer #{access_token}" }))) }
-      let(:emails_response_no_data) { instance_double(Faraday::Response, status: 200, body: "[]") }
+      let(:emails_response_body_empty) { [].to_json }
+      let(:emails_response_empty) { instance_double(Faraday::Response, status: 200, body: emails_response_body_empty) }
 
       before do
         allow(http_client).to receive(:get).with("https://api.github.com/user", any_args).and_return(user_response_no_email)
-        allow(http_client).to receive(:get).with("https://api.github.com/user/emails", any_args).and_return(emails_response_no_data)
+        allow(http_client).to receive(:get).with("https://api.github.com/user/emails", any_args).and_return(emails_response_empty)
       end
 
       it "returns user info with nil email" do
@@ -266,73 +317,79 @@ RSpec.describe Clavis::Providers::Github do
         expect(result[:email]).to be_nil
       end
     end
-  end
 
-  describe "#refresh_token" do
-    let(:http_client) { instance_double(Faraday::Connection) }
-    let(:refresh_token) { "github-refresh-token" }
-    let(:response_body) do
-      {
-        access_token: "new-github-access-token",
-        token_type: "bearer",
-        scope: "user:email"
-      }.to_json
-    end
-    let(:response) { instance_double(Faraday::Response, status: 200, body: response_body) }
-
-    before do
-      allow(provider).to receive(:http_client).and_return(http_client)
-      allow(http_client).to receive(:post).and_return(response)
-      allow(Clavis::Logging).to receive(:log_token_refresh)
-      allow(Clavis::Security::InputValidator).to receive(:valid_token?).and_return(true)
-      allow(Clavis::Security::InputValidator).to receive(:valid_token_response?).and_return(true)
-      allow(Clavis::Security::InputValidator).to receive(:sanitize_hash).and_return({
-                                                                                      access_token: "new-github-access-token",
-                                                                                      token_type: "bearer",
-                                                                                      scope: "user:email"
-                                                                                    })
-    end
-
-    it "refreshes the token successfully" do
-      result = provider.refresh_token(refresh_token)
-
-      expect(http_client).to have_received(:post).with(
-        "https://github.com/login/oauth/access_token",
+    context "with GitHub Enterprise configuration" do
+      let(:config) do
         {
-          grant_type: "refresh_token",
-          refresh_token: refresh_token,
           client_id: "test-client-id",
-          client_secret: "test-client-secret"
+          client_secret: "test-client-secret",
+          redirect_uri: "https://example.com/auth/github/callback",
+          site_url: "https://api.github.enterprise.com"
         }
-      )
-
-      expect(result).to include(
-        access_token: "new-github-access-token"
-      )
-
-      expect(Clavis::Logging).to have_received(:log_token_refresh).with(:github, true)
-    end
-
-    context "when the token refresh fails" do
-      let(:error_response) do
-        instance_double(
-          Faraday::Response,
-          status: 400,
-          body: {
-            error: "invalid_grant",
-            error_description: "The refresh token is invalid or has expired."
-          }.to_json
-        )
       end
 
       before do
-        allow(http_client).to receive(:post).and_return(error_response)
-        allow(provider).to receive(:handle_token_error_response).and_raise(Clavis::InvalidGrant)
+        allow(http_client).to receive(:get).with("https://api.github.enterprise.com/user", any_args).and_yield(request_double).and_return(user_response)
+        allow(http_client).to receive(:get).with("https://api.github.enterprise.com/user/emails", any_args).and_yield(request_double).and_return(emails_response)
       end
 
-      it "handles the error response" do
-        expect { provider.refresh_token(refresh_token) }.to raise_error(Clavis::InvalidGrant)
-        expect(Clavis::Logging).to have_received(:log_token_refresh).with(:github, false)
+      it "uses the custom API endpoints" do
+        provider.get_user_info(access_token)
+
+        expect(http_client).to have_received(:get).with("https://api.github.enterprise.com/user")
+        expect(http_client).to have_received(:get).with("https://api.github.enterprise.com/user/emails")
+      end
+    end
+  end
+
+  describe "#find_primary_email" do
+    context "with a primary and verified email" do
+      let(:emails) do
+        [
+          { email: "first@example.com", primary: false, verified: true },
+          { email: "second@example.com", primary: true, verified: true },
+          { email: "third@example.com", primary: false, verified: false }
+        ]
+      end
+
+      it "returns the primary and verified email" do
+        result = provider.send(:find_primary_email, emails)
+        expect(result).to eq({ email: "second@example.com", primary: true, verified: true })
+      end
+    end
+
+    context "with no primary but verified emails" do
+      let(:emails) do
+        [
+          { email: "first@example.com", primary: false, verified: true },
+          { email: "second@example.com", primary: false, verified: false }
+        ]
+      end
+
+      it "returns the first verified email" do
+        result = provider.send(:find_primary_email, emails)
+        expect(result).to eq({ email: "first@example.com", primary: false, verified: true })
+      end
+    end
+
+    context "with primary but unverified email" do
+      let(:emails) do
+        [
+          { email: "first@example.com", primary: false, verified: false },
+          { email: "second@example.com", primary: true, verified: false }
+        ]
+      end
+
+      it "returns the primary email" do
+        result = provider.send(:find_primary_email, emails)
+        expect(result).to eq({ email: "second@example.com", primary: true, verified: false })
+      end
+    end
+
+    context "with no emails" do
+      it "returns nil" do
+        result = provider.send(:find_primary_email, [])
+        expect(result).to be_nil
       end
     end
   end

@@ -4,23 +4,32 @@ module Clavis
   module Providers
     class Github < Base
       def initialize(config = {})
-        config[:authorization_endpoint] = "https://github.com/login/oauth/authorize"
-        config[:token_endpoint] = "https://github.com/login/oauth/access_token"
-        config[:userinfo_endpoint] = "https://api.github.com/user"
+        # Support GitHub Enterprise by allowing configuration of base URLs
+        site_url = config[:site_url] || "https://api.github.com"
+        auth_url = config[:authorize_url] || "https://github.com/login/oauth/authorize"
+        token_url = config[:token_url] || "https://github.com/login/oauth/access_token"
+
+        config[:authorization_endpoint] = auth_url
+        config[:token_endpoint] = token_url
+        config[:userinfo_endpoint] = "#{site_url}/user"
         config[:scope] = config[:scope] || "user:email"
+
+        # Store for later use
+        @site_url = site_url
+
         super
       end
 
       def authorization_endpoint
-        "https://github.com/login/oauth/authorize"
+        @config[:authorization_endpoint]
       end
 
       def token_endpoint
-        "https://github.com/login/oauth/access_token"
+        @config[:token_endpoint]
       end
 
       def userinfo_endpoint
-        "https://api.github.com/user"
+        @config[:userinfo_endpoint]
       end
 
       def default_scopes
@@ -35,6 +44,7 @@ module Clavis
 
         response = http_client.get(userinfo_endpoint) do |req|
           req.headers["Authorization"] = "Bearer #{access_token}"
+          req.headers["Accept"] = "application/vnd.github.v3+json"
         end
 
         if response.status != 200
@@ -54,14 +64,21 @@ module Clavis
 
         # GitHub doesn't include email in the user response if it's private
         # We need to make a separate request to get the emails
-        emails = get_emails(response.env.request.headers["Authorization"])
-        primary_email = emails.find { |email| email[:primary] }
+        auth_header = response.env.request.headers["Authorization"]
+        emails = get_emails(auth_header)
+
+        # Find primary and verified email or fall back to profile email
+        primary_email = find_primary_email(emails)
+        email = primary_email[:email] if primary_email
+
+        # Fallback to profile email if available
+        email ||= data[:email]
 
         {
           id: data[:id].to_s,
           name: data[:name],
           nickname: data[:login],
-          email: primary_email ? primary_email[:email] : data[:email],
+          email: email,
           email_verified: primary_email ? primary_email[:verified] : nil,
           image: data[:avatar_url]
         }
@@ -69,16 +86,36 @@ module Clavis
 
       private
 
+      # Find the primary and verified email from the list
+      def find_primary_email(emails)
+        # First look for primary and verified
+        primary = emails.find { |email| email[:primary] && email[:verified] }
+
+        # If no primary+verified found, look for just primary
+        primary ||= emails.find { |email| email[:primary] }
+
+        # If no primary found, look for any verified
+        primary ||= emails.find { |email| email[:verified] }
+
+        # Return the email or nil
+        primary
+      end
+
       def get_emails(auth_header)
         return [] unless auth_header
 
-        response = http_client.get("https://api.github.com/user/emails") do |req|
+        # Use the stored site URL to build the emails endpoint
+        emails_endpoint = "#{@site_url}/user/emails"
+
+        response = http_client.get(emails_endpoint) do |req|
           req.headers["Authorization"] = auth_header
+          req.headers["Accept"] = "application/vnd.github.v3+json"
         end
 
         if response.status == 200
           JSON.parse(response.body, symbolize_names: true)
         else
+          Clavis::Logging.log_custom("github_emails_fetch", false)
           []
         end
       end
