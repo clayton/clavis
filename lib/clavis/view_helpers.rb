@@ -32,10 +32,10 @@ module Clavis
       options[:html]["data-turbo-frame"] = "_top"
       options[:html]["rel"] = "nofollow"
 
-      # Generate the button
+      # Generate the button with a direct path to the auth endpoint
       clavis_link_to(
         clavis_oauth_button_content(provider, options),
-        clavis_auth_path(provider),
+        clavis_auth_authorize_path(provider),
         method: options[:method],
         class: options[:class],
         **options[:html]
@@ -60,31 +60,17 @@ module Clavis
     end
 
     def clavis_auth_path(provider)
-      # Determine the base path using multiple strategies for maximum compatibility
-
-      # Strategy 1: Get path from configured callback_path
-      if defined?(Clavis.configuration) && Clavis.configuration.respond_to?(:default_callback_path)
-        base_path = Clavis.configuration.default_callback_path.to_s
-        # Extract base path before the first variable component
-        # Example: '/auth/:provider/callback' becomes '/auth/'
-        if base_path.include?(":")
-          base_path = base_path.split(":").first
-        else
-          # If there's no variable, extract the directory part of the path
-          base_path = File.dirname(base_path)
-          base_path = "/" if base_path == "."
-        end
+      if defined?(clavis) && clavis.respond_to?("auth_#{provider}_path")
+        # Use the engine routing proxy if available
+        clavis.send("auth_#{provider}_path")
+      elsif defined?(clavis) && clavis.respond_to?(:auth_path)
+        # Fallback to generic auth path with provider param
+        clavis.auth_path(provider: provider)
       else
-        # Default fallback if no configuration is available
-        base_path = "/auth"
+        # Last resort: construct the path manually
+        # This path is relative to the engine mount point
+        "/#{provider}"
       end
-
-      # Ensure the base path has a leading slash but no trailing slash
-      base_path = "/#{base_path}" unless base_path.start_with?("/")
-      base_path = base_path.chomp("/")
-
-      # Return the complete path
-      "#{base_path}/#{provider}"
     end
 
     def clavis_default_button_text(provider)
@@ -174,6 +160,7 @@ module Clavis
     end
 
     def clavis_auth_authorize_path(provider)
+      # Explicitly add /auth prefix for direct calls
       "/auth/#{provider}"
     end
 

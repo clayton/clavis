@@ -26,11 +26,12 @@ RSpec.describe Clavis::Models::Concerns::OauthAuthenticatable do
 
       include Clavis::Models::Concerns::OauthAuthenticatable
 
-      attr_accessor :id
+      attr_accessor :id, :oauth_user
 
       def initialize(id = 1)
         @id = id
         @oauth_identities = []
+        @oauth_user = false
       end
 
       attr_reader :oauth_identities
@@ -45,13 +46,16 @@ RSpec.describe Clavis::Models::Concerns::OauthAuthenticatable do
     identity = Clavis::OauthIdentity.new
     identity.provider = "google"
     identity.updated_at = Time.now - 172_800 # 2 days in seconds
-    # Explicitly set the auth_data to ensure it's property initialized
+    # Include both string and symbol keys to test proper handling
     identity.instance_variable_set(:@auth_data, {
-                                     standardized: {
-                                       email: "google@example.com",
-                                       name: "Google User",
-                                       avatar_url: "https://google.com/avatar.jpg"
-                                     }
+                                     "standardized" => {
+                                       "email" => "google@example.com",
+                                       "name" => "Google User",
+                                       "avatar_url" => "https://google.com/avatar.jpg"
+                                     },
+                                     "name" => "Google User (Raw)",
+                                     "email" => "google_raw@example.com",
+                                     "image" => "https://google.com/raw-avatar.jpg"
                                    })
     identity
   end
@@ -60,13 +64,16 @@ RSpec.describe Clavis::Models::Concerns::OauthAuthenticatable do
     identity = Clavis::OauthIdentity.new
     identity.provider = "github"
     identity.updated_at = Time.now - 86_400 # 1 day in seconds
-    # Explicitly set the auth_data to ensure it's property initialized
+    # Use symbol keys to test flexibility
     identity.instance_variable_set(:@auth_data, {
                                      standardized: {
                                        email: "github@example.com",
                                        name: "GitHub User",
                                        avatar_url: "https://github.com/avatar.jpg"
-                                     }
+                                     },
+                                     name: "GitHub User (Raw)",
+                                     email: "github_raw@example.com",
+                                     picture: "https://github.com/raw-avatar.jpg"
                                    })
     identity
   end
@@ -74,35 +81,50 @@ RSpec.describe Clavis::Models::Concerns::OauthAuthenticatable do
   describe "#oauth_avatar_url" do
     before do
       allow(user).to receive(:oauth_identities).and_return([google_identity, github_identity])
+      allow(user).to receive(:oauth_identity).and_return(google_identity)
       allow(user).to receive(:oauth_identity_for).with("google").and_return(google_identity)
       allow(user).to receive(:oauth_identity_for).with("github").and_return(github_identity)
     end
 
-    it "returns avatar URL from most recent identity when no provider specified" do
-      google_identity.updated_at = Time.now
-      github_identity.updated_at = Time.now - 86_400 # 1 day in seconds
-
+    it "prefers standardized data over raw data" do
       expect(user.oauth_avatar_url).to eq("https://google.com/avatar.jpg")
     end
 
-    it "returns avatar URL from specified provider when provider is given" do
-      expect(user.oauth_avatar_url("github")).to eq("https://github.com/avatar.jpg")
+    it "falls back to image field if no standardized data" do
+      google_identity.instance_variable_set(:@auth_data, {
+                                              "email" => "google@example.com",
+                                              "name" => "Google User",
+                                              "image" => "https://google.com/fallback-avatar.jpg"
+                                            })
+
+      expect(user.oauth_avatar_url).to eq("https://google.com/fallback-avatar.jpg")
+    end
+
+    it "falls back to picture field if no image field" do
+      google_identity.instance_variable_set(:@auth_data, {
+                                              "email" => "google@example.com",
+                                              "name" => "Google User",
+                                              "picture" => "https://google.com/picture-avatar.jpg"
+                                            })
+
+      expect(user.oauth_avatar_url).to eq("https://google.com/picture-avatar.jpg")
     end
 
     it "returns nil when no identities exist" do
       allow(user).to receive(:oauth_identities).and_return([])
+      allow(user).to receive(:oauth_identity).and_return(nil)
 
       expect(user.oauth_avatar_url).to be_nil
     end
 
-    it "returns nil when identity has no standardized data" do
+    it "returns nil when identity has no auth_data" do
       identity_without_data = Clavis::OauthIdentity.new(
         provider: "empty",
-        auth_data: {},
+        auth_data: nil,
         updated_at: Time.now
       )
 
-      allow(user).to receive(:oauth_identities).and_return([identity_without_data])
+      allow(user).to receive(:oauth_identity).and_return(identity_without_data)
 
       expect(user.oauth_avatar_url).to be_nil
     end
@@ -111,52 +133,87 @@ RSpec.describe Clavis::Models::Concerns::OauthAuthenticatable do
   describe "#oauth_name" do
     before do
       allow(user).to receive(:oauth_identities).and_return([google_identity, github_identity])
+      allow(user).to receive(:oauth_identity).and_return(google_identity)
       allow(user).to receive(:oauth_identity_for).with("google").and_return(google_identity)
       allow(user).to receive(:oauth_identity_for).with("github").and_return(github_identity)
     end
 
-    it "returns name from most recent identity when no provider specified" do
-      github_identity.updated_at = Time.now
-
-      expect(user.oauth_name).to eq("GitHub User")
+    it "prefers standardized data over raw data" do
+      expect(user.oauth_name).to eq("Google User")
     end
 
-    it "returns name from specified provider when provider is given" do
-      expect(user.oauth_name("google")).to eq("Google User")
+    it "falls back to raw data if no standardized data" do
+      google_identity.instance_variable_set(:@auth_data, {
+                                              "email" => "google@example.com",
+                                              "name" => "Google User (Raw)"
+                                            })
+
+      expect(user.oauth_name).to eq("Google User (Raw)")
+    end
+
+    it "handles both string and symbol keys" do
+      # Test with string keys
+      google_identity.instance_variable_set(:@auth_data, {
+                                              "name" => "String Key User"
+                                            })
+      expect(user.oauth_name).to eq("String Key User")
+
+      # Test with symbol keys
+      google_identity.instance_variable_set(:@auth_data, {
+                                              name: "Symbol Key User"
+                                            })
+      expect(user.oauth_name).to eq("Symbol Key User")
     end
   end
 
   describe "#oauth_email" do
     before do
       allow(user).to receive(:oauth_identities).and_return([google_identity, github_identity])
+      allow(user).to receive(:oauth_identity).and_return(google_identity)
       allow(user).to receive(:oauth_identity_for).with("google").and_return(google_identity)
       allow(user).to receive(:oauth_identity_for).with("github").and_return(github_identity)
     end
 
-    it "returns email from most recent identity when no provider specified" do
-      github_identity.updated_at = Time.now
-
-      expect(user.oauth_email).to eq("github@example.com")
+    it "prefers standardized data over raw data" do
+      expect(user.oauth_email).to eq("google@example.com")
     end
 
-    it "returns email from specified provider when provider is given" do
-      expect(user.oauth_email("google")).to eq("google@example.com")
+    it "falls back to raw data if no standardized data" do
+      google_identity.instance_variable_set(:@auth_data, {
+                                              "email" => "google_raw@example.com",
+                                              "name" => "Google User"
+                                            })
+
+      expect(user.oauth_email).to eq("google_raw@example.com")
     end
-  end
 
-  describe "debugging" do
-    it "inspects the identity objects in detail" do
-      allow(user).to receive(:oauth_identities).and_return([google_identity, github_identity])
-      allow(user).to receive(:oauth_identity_for).with("google").and_return(google_identity)
-      allow(user).to receive(:oauth_identity_for).with("github").and_return(github_identity)
+    it "handles both string and symbol keys" do
+      # Test with string keys
+      google_identity.instance_variable_set(:@auth_data, {
+                                              "email" => "string_key@example.com"
+                                            })
+      expect(user.oauth_email).to eq("string_key@example.com")
 
-      # Test if the auth_data is working as expected
-      expect(google_identity.auth_data).to include(:standardized)
-      expect(google_identity.auth_data[:standardized]).to include(:email)
+      # Test with symbol keys
+      google_identity.instance_variable_set(:@auth_data, {
+                                              email: "symbol_key@example.com"
+                                            })
+      expect(user.oauth_email).to eq("symbol_key@example.com")
     end
   end
 
   describe "#oauth_user?" do
+    context "when the oauth_user flag is true" do
+      before do
+        user.oauth_user = true
+        allow(user).to receive(:oauth_identities).and_return([])
+      end
+
+      it "returns true even if no identities exist" do
+        expect(user.oauth_user?).to be true
+      end
+    end
+
     context "when the user has OAuth identities" do
       before do
         allow(user).to receive(:oauth_identities).and_return([google_identity])
@@ -167,8 +224,9 @@ RSpec.describe Clavis::Models::Concerns::OauthAuthenticatable do
       end
     end
 
-    context "when the user has no OAuth identities" do
+    context "when the user has no OAuth identities and flag is false" do
       before do
+        user.oauth_user = false
         allow(user).to receive(:oauth_identities).and_return([])
       end
 
@@ -181,6 +239,7 @@ RSpec.describe Clavis::Models::Concerns::OauthAuthenticatable do
       let(:ar_collection) { double("AR Collection") }
 
       before do
+        user.oauth_user = false
         allow(user).to receive(:oauth_identities).and_return(ar_collection)
         allow(ar_collection).to receive(:exists?).and_return(true)
       end

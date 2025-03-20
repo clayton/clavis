@@ -80,6 +80,9 @@ module Clavis
 
       def process_userinfo_response(response)
         data = JSON.parse(response.body, symbolize_names: true)
+
+        # For Google, we ALWAYS want to use the sub as the identifier
+        # We don't set @uid anymore since we want to use sub consistently
         {
           sub: data[:sub],
           email: data[:email],

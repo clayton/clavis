@@ -63,6 +63,7 @@ Add a button to your view:
 7. [Error Handling](#error-handling)
 8. [Security Considerations](#security-considerations)
 9. [API Reference](#api-reference)
+10. [Rate Limiting](#rate-limiting)
 
 ## Overview
 
@@ -203,13 +204,21 @@ class Google < Base
     "openid email profile"
   end
   
+  def openid_provider?
+    true
+  end
+  
   protected
   
   def process_userinfo_response(response)
     data = JSON.parse(response.body)
+    
+    # For OpenID Connect providers like Google, we use the sub claim
+    # as the stable identifier. This is guaranteed to be unique and
+    # consistent for each user, unlike other fields that might change.
     {
       provider: "google",
-      uid: data["sub"],
+      uid: data["sub"], # sub is the stable identifier
       info: {
         email: data["email"],
         name: data["name"],
@@ -217,6 +226,30 @@ class Google < Base
       }
     }
   end
+end
+```
+
+### OpenID Connect vs OAuth2 Providers
+
+Clavis handles two types of providers differently:
+
+1. **OpenID Connect Providers** (e.g., Google)
+   - Uses the `sub` claim as the stable identifier
+   - This is guaranteed to be unique and consistent
+   - Found in the ID token claims or userinfo response
+   - Example: Google's `sub` is a stable numeric identifier
+
+2. **OAuth2-only Providers** (e.g., GitHub)
+   - Uses the provider's `uid` field
+   - Identifier format varies by provider
+   - Example: GitHub uses the user's numeric ID
+
+When implementing a custom provider, use `openid_provider?` to indicate if it's an OpenID Connect provider:
+
+```ruby
+def openid_provider?
+  true # for OIDC providers
+  false # for OAuth2-only providers
 end
 ```
 
@@ -362,6 +395,64 @@ Clavis implements several security features:
 3. **HTTPS** - Required for OAuth operations
 4. **Secure Token Storage** - Encrypted in database
 5. **Error Logging** - Security events monitoring
+
+### Rate Limiting
+
+Clavis integrates with Rack::Attack to protect OAuth endpoints against DDoS and brute force attacks.
+
+```ruby
+# Rate limiting is enabled by default
+Clavis.configure do |config|
+  config.rate_limiting_enabled = true
+  
+  # Optional: Configure custom throttles
+  config.custom_throttles = {
+    "login_page": {
+      limit: 30,
+      period: 1.minute,
+      block: ->(req) { req.path == "/login" ? req.ip : nil }
+    }
+  }
+end
+```
+
+#### Default Rate Limits
+
+By default, Clavis applies these rate limits:
+
+1. **Authorization Endpoints**: 20 requests per minute per IP address
+2. **Callback Endpoints**: 15 requests per minute per IP address
+3. **Login Attempts by Email**: 5 requests per 20 seconds per email address
+
+#### Integration Details
+
+1. Clavis uses Rack::Attack middleware
+2. Rate limiting is automatically configured when the gem is loaded
+3. No additional gem installation required (Rack::Attack is a dependency)
+4. Uses Rails cache for throttle storage by default
+
+#### Custom Configuration
+
+For advanced customization, create a dedicated Rack::Attack configuration:
+
+```ruby
+# config/initializers/rack_attack.rb
+Rack::Attack.throttle("custom/auth", limit: 10, period: 30.seconds) do |req|
+  req.ip if req.path =~ %r{/auth/}
+end
+
+# Dedicated cache store for rate limiting
+Rack::Attack.cache.store = ActiveSupport::Cache::RedisCacheStore.new(
+  url: ENV["REDIS_RATE_LIMIT_URL"]
+)
+```
+
+#### Implementation Notes
+
+1. Rate limiting middleware installation happens in `Clavis::Engine`
+2. Throttle rules are defined in `Clavis::Security::RateLimiter`
+3. Configuration via `rate_limiting_enabled` and `custom_throttles` in Clavis config
+4. When disabled, no middleware is added and there's zero performance impact
 
 ## API Reference
 

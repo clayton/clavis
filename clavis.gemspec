@@ -49,6 +49,7 @@ Gem::Specification.new do |spec|
   # Uncomment to register a new dependency of your gem
   spec.add_dependency "faraday", "~> 2.7"
   spec.add_dependency "jwt", "~> 2.7"
+  spec.add_dependency "rack-attack", "~> 6.7"
   spec.add_dependency "rails", "~> 8.0"
 
   # For more information and examples about making a new gem, check out our

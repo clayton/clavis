@@ -2,6 +2,7 @@
 
 class <%= class_name %>Controller < ApplicationController
   include Clavis::Controllers::Concerns::Authentication
+  include Clavis::Controllers::Concerns::SessionManagement
   
   # Skip CSRF protection for callback action since OAuth providers will redirect to it
   # The OAuth flow has its own CSRF protection via the state parameter
@@ -13,12 +14,15 @@ class <%= class_name %>Controller < ApplicationController
   # Login page with OAuth provider buttons
   def login
     # If user is already logged in, redirect to root path
-    redirect_to after_login_path if current_user
+    redirect_to after_login_path if authenticated?
   end
   
   # Start OAuth flow
   def authorize
-    # Store the return_to path in the session if provided
+    # Store the current URL to return to after authentication if needed
+    store_location if params[:return_to].blank?
+    
+    # Store the return_to path in the session if explicitly provided
     if params[:return_to].present?
       Clavis::Security::SessionManager.store_redirect_uri(session, params[:return_to])
     end
@@ -35,7 +39,7 @@ class <%= class_name %>Controller < ApplicationController
       # Find or create user from OAuth data
       @user = find_or_create_user(auth_hash)
       
-      # Sign in the user
+      # Sign in the user using the secure cookie approach
       sign_in_user(@user)
       
       # Redirect to the stored redirect URI or default path
@@ -84,7 +88,7 @@ class <%= class_name %>Controller < ApplicationController
       return identity.user
     else
       # Create a new user and identity
-      user = User.create_from_oauth(auth_hash)
+      user = User.find_or_create_from_clavis(auth_hash)
       
       # Create the identity
       OauthIdentity.create(
@@ -98,39 +102,6 @@ class <%= class_name %>Controller < ApplicationController
       
       return user
     end
-  end
-  
-  # Sign in a user
-  def sign_in_user(user)
-    # This should be implemented based on your authentication system
-    # For Devise:
-    # sign_in(user)
-    
-    # For a simple session-based authentication:
-    session[:user_id] = user.id
-  end
-  
-  # Sign out a user
-  def sign_out_user
-    # This should be implemented based on your authentication system
-    # For Devise:
-    # sign_out
-    
-    # For a simple session-based authentication:
-    session.delete(:user_id)
-    
-    # Clear the session
-    reset_session
-  end
-  
-  # Path to redirect to after successful login
-  def after_login_path
-    root_path
-  end
-  
-  # Path to redirect to after logout
-  def after_logout_path
-    login_path
   end
   
   # Handle errors
@@ -163,15 +134,4 @@ class <%= class_name %>Controller < ApplicationController
       redirect_to login_path
     end
   end
-  
-  # Current user helper
-  def current_user
-    # This should be implemented based on your authentication system
-    # For Devise:
-    # current_user
-    
-    # For a simple session-based authentication:
-    @current_user ||= User.find_by(id: session[:user_id]) if session[:user_id]
-  end
-  helper_method :current_user
 end 

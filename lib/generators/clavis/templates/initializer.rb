@@ -37,4 +37,11 @@ Clavis.configure do |config|
   #     user.verified_email = true
   #   end
   # end
+  
+  # IMPORTANT: By default, after successful authentication users will be
+  # redirected to your application's root_path. If you need to customize this,
+  # you can override the after_login_path method in your own controller.
+  # 
+  # If you're experiencing redirect loops after authentication, make sure 
+  # you have a root_path defined in your application.
 end 

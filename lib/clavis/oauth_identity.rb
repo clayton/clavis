@@ -12,6 +12,17 @@ module Clavis
       # Rails 8.0+ serialization
       serialize :auth_data
 
+      # Alias for authenticatable to support User model assignment
+      def user
+        authenticatable
+      end
+
+      # Alias for authenticatable= to support User model assignment
+      def user=(user)
+        self.authenticatable = user
+        self.authenticatable_type = user.class.name
+      end
+
       # Override token getter to decrypt the token
       def token
         Clavis::Security::TokenStorage.decrypt(self[:token])
@@ -44,7 +55,7 @@ module Clavis
 
       def ensure_fresh_token
         return token unless token_expired?
-        return nil unless refresh_token.present?
+        return nil unless refresh_token && !refresh_token.empty?
 
         begin
           provider_instance = Clavis.provider(
@@ -54,11 +65,9 @@ module Clavis
 
           new_tokens = provider_instance.refresh_token(refresh_token)
 
-          update!(
-            token: new_tokens[:access_token],
-            refresh_token: new_tokens[:refresh_token] || refresh_token,
-            expires_at: new_tokens[:expires_at] ? Time.at(new_tokens[:expires_at]) : nil
-          )
+          self.token = new_tokens[:access_token]
+          self.refresh_token = new_tokens[:refresh_token] || refresh_token
+          self.expires_at = new_tokens[:expires_at] ? Time.at(new_tokens[:expires_at]) : nil
 
           token
         rescue Clavis::UnsupportedOperation => e

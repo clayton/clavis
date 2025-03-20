@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require "rails"
+require_relative "controllers/concerns/authentication"
+require_relative "controllers/concerns/session_management"
+require_relative "security/rate_limiter"
 
 module Clavis
   class Engine < ::Rails::Engine
@@ -11,16 +14,49 @@ module Clavis
     mattr_accessor :route_namespace_id
     self.route_namespace_id = "clavis"
 
-    # Class-level configuration option to control helper inclusion
-    mattr_accessor :include_view_helpers
-    self.include_view_helpers = true # Default to true
+    # Minimum TLS version for secure requests
+    # At the application level, this is handled by Rails 7+ directly
+    # At the engine level, we need to set it manually for Net::HTTP
+    config.before_initialize do |_app|
+      require "net/http"
+      # Set minimum TLS version to 1.2 for security
+      # Can be upgraded to TLS 1.3 when supported by all platforms
+      begin
+        OpenSSL::SSL::SSLContext::DEFAULT_PARAMS[:ssl_version] = :tlsv1_2
+        OpenSSL::SSL::SSLContext::DEFAULT_PARAMS[:min_version] = OpenSSL::SSL::TLS1_2_VERSION
+      rescue NameError
+        # Ruby or OpenSSL version might not support TLS 1.2
+        # In this case, we let the system use its default
+      end
+    end
 
-    # Class-level accessor for the route setup function
-    mattr_accessor :setup_routes
+    # Expose Clavis view helpers to the host application
+    class << self
+      attr_accessor :include_view_helpers
+    end
 
-    # Configuration flag to control automatic route installation
-    mattr_accessor :auto_install_routes
-    self.auto_install_routes = true # Default to true
+    # Default to true - can be changed in configuration
+    self.include_view_helpers = true
+
+    # Setup routes lambda - will be called if auto_install_routes is true
+    # Takes a single argument (app) which is the Rails application
+    # Define this before the initializer so it can be overridden if needed
+    mattr_accessor :setup_routes, default: lambda { |app|
+      # Mount the engine routes at /auth by default
+      app.routes.draw do
+        # Add mount point to the application routes
+        mount Clavis::Engine => "/auth"
+      end
+    }
+
+    # Whether to automatically install routes
+    mattr_accessor :auto_install_routes, default: true
+
+    # Setup Rack::Attack middleware for rate limiting
+    initializer "clavis.rack_attack", before: :load_config_initializers do |app|
+      # Install Rack::Attack if available
+      Clavis::Security::RateLimiter.install(app)
+    end
 
     initializer "clavis.assets" do |app|
       # Add Clavis assets to the asset pipeline
@@ -39,19 +75,18 @@ module Clavis
       end
     end
 
-    # Add an initializer to set up application routes when the engine is mounted
     initializer "clavis.routes", after: :add_routing_paths do |app|
       # Only install routes automatically if enabled
       if auto_install_routes && setup_routes.respond_to?(:call)
         # Call the setup_routes lambda to add routes to the parent application
         setup_routes.call(app)
-        Clavis::Logging.log_info("Installed Clavis routes: auth_path and auth_callback_path helpers are now available")
       end
     end
 
     initializer "clavis.helpers" do
       ActiveSupport.on_load(:action_controller) do
         include Clavis::Controllers::Concerns::Authentication
+        include Clavis::Controllers::Concerns::SessionManagement
       end
 
       # Include view helpers based on configuration (default: true)
@@ -139,6 +174,10 @@ module Clavis
 
       if !Clavis.configuration.rotate_session_after_login && Rails.env.production?
         Clavis::Logging.security_warning("Session rotation after login disabled in production (not recommended)")
+      end
+
+      if !Clavis.configuration.rate_limiting_enabled && Rails.env.production?
+        Clavis::Logging.security_warning("Rate limiting disabled in production (not recommended)")
       end
     end
 

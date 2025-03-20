@@ -42,7 +42,8 @@ module Clavis
       else
         # Just a provider name, create a detailed message
         provider = provider_or_message.to_s
-        message = "Provider '#{provider}' is not properly configured. Please check your configuration in config/initializers/clavis.rb.\n" \
+        message = "Provider '#{provider}' is not properly configured. " \
+                  "Please check your configuration in config/initializers/clavis.rb.\n" \
                   "Required fields for #{provider} provider: client_id, client_secret, and redirect_uri.\n" \
                   "Example configuration:\n" \
                   "Clavis.configure do |config|\n  " \

@@ -20,3 +20,5 @@ gem "bcrypt" # for rails 8 authentication in our dummy app
 # Development dependencies moved from gemspec
 gem "capybara", "~> 3.39", group: %i[development test]
 gem "sqlite3", "~> 2.1.0", group: %i[development test]
+
+gem "rack-attack", "~> 6.7"

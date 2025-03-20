@@ -4,6 +4,7 @@ PATH
     clavis (0.6.8)
       faraday (~> 2.7)
       jwt (~> 2.7)
+      rack-attack (~> 6.7)
       rails (~> 8.0)
 
 GEM
@@ -179,6 +180,8 @@ GEM
     public_suffix (6.0.1)
     racc (1.8.1)
     rack (3.1.12)
+    rack-attack (6.7.0)
+      rack (>= 1.0, < 4)
     rack-protection (4.1.1)
       base64 (>= 0.1.0)
       logger (>= 1.6.0)
@@ -294,6 +297,7 @@ DEPENDENCIES
   generator_spec (~> 0.9.4)
   omniauth (~> 2.0)
   ostruct (~> 0.6.0)
+  rack-attack (~> 6.7)
   rake (~> 13.0)
   rspec (~> 3.0)
   rspec-rails (~> 6.0)

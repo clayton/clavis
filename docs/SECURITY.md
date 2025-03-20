@@ -116,6 +116,53 @@ Clavis.configure do |config|
 end
 ```
 
+### Rate Limiting
+
+Clavis integrates with Rack::Attack to provide rate limiting for OAuth endpoints, protecting against DDoS and brute force attacks.
+
+```ruby
+# In config/initializers/clavis.rb
+Clavis.configure do |config|
+  # Enable rate limiting (enabled by default)
+  config.rate_limiting_enabled = true
+  
+  # Configure custom throttle rules
+  config.custom_throttles = {
+    "login_page": {
+      limit: 30,
+      period: 1.minute,
+      block: ->(req) { req.path == "/login" ? req.ip : nil }
+    }
+  }
+end
+```
+
+By default, Clavis applies the following rate limits:
+
+- **OAuth Authorization Endpoints**: 20 requests per minute per IP address
+- **OAuth Callback Endpoints**: 15 requests per minute per IP address
+- **Login Attempts by Email**: 5 requests per 20 seconds per email address
+
+For more advanced configuration, you can define custom Rack::Attack rules in a separate initializer:
+
+```ruby
+# config/initializers/rack_attack.rb
+Rack::Attack.blocklist("block suspicious requests") do |req|
+  # Block requests that contain SQL injection patterns
+  req.path.include?("' OR '1'='1") || req.path.include?("--")
+end
+
+# Customize throttled response
+Rack::Attack.throttled_responder = lambda do |req|
+  [429, {'Content-Type' => 'application/json'}, [{ error: "Too many requests" }.to_json]]
+end
+
+# Use a dedicated Redis instance for rate limiting
+Rack::Attack.cache.store = ActiveSupport::Cache::RedisCacheStore.new(
+  url: ENV["REDIS_RATE_LIMIT_URL"]
+)
+```
+
 ## Model Security
 
 ### ActiveRecord Encryption

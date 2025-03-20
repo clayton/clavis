@@ -206,15 +206,14 @@ module Clavis
           end
         end
 
-        # Try to get a UID from various sources
-        uid = if user_info[:sub] && !user_info[:sub].to_s.empty?
+        # For OpenID Connect providers, we should always use the sub claim as the identifier
+        # For non-OIDC providers, fall back to other options
+        uid = if openid_provider? && token_data[:id_token_claims]&.dig(:sub)
+                token_data[:id_token_claims][:sub]
+              elsif user_info[:sub] && !user_info[:sub].to_s.empty?
                 user_info[:sub]
               elsif user_info[:id] && !user_info[:id].to_s.empty?
                 user_info[:id]
-              elsif token_data[:id_token_claims] &&
-                    token_data[:id_token_claims][:sub] &&
-                    !token_data[:id_token_claims][:sub].to_s.empty?
-                token_data[:id_token_claims][:sub]
               else
                 # Generate a hash of some token data for consistent ids
                 data_for_hash = "#{provider_name}:#{token_data[:access_token] || ""}:#{user_info[:email] || ""}"

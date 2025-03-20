@@ -24,6 +24,7 @@ module Clavis
 
       def create_initializer
         template "initializer.rb", "config/initializers/clavis.rb"
+        say_status :create, "config/initializers/clavis.rb", :green
       end
 
       def add_stylesheets
@@ -33,9 +34,11 @@ module Clavis
 
         # Copy the CSS template to the vendor directory
         template "clavis.css", "vendor/assets/stylesheets/clavis.css"
+        say_status :create, "vendor/assets/stylesheets/clavis.css", :green
 
         # Create custom styles file in app/assets
         create_file "app/assets/stylesheets/clavis_custom.css", "/* Add your custom Clavis styles here */"
+        say_status :create, "app/assets/stylesheets/clavis_custom.css", :green
 
         # For Rails 7+ with Propshaft
         if File.exist?(Rails.root.join("app", "assets", "stylesheets", "application.css"))
@@ -77,7 +80,7 @@ module Clavis
         # Then create the User table migration if the users table exists
         create_user_migration
       rescue ActiveRecord::NoDatabaseError
-        say "Skipping migration because database doesn't exist. Run 'rails db:create' first."
+        say_status :error, "Skipping migration because database doesn't exist. Run 'rails db:create' first.", :red
       end
 
       def mount_engine
@@ -89,6 +92,8 @@ module Clavis
           say_status :skip, "Clavis::Engine is already mounted, skipping route addition.", :yellow
         else
           route "mount Clavis::Engine => '/auth'"
+          say_status :route, "Mounted Clavis::Engine at /auth", :green
+          say_status :info, "Added auth_path and auth_callback_path route helpers", :green
         end
       end
 
@@ -137,49 +142,36 @@ module Clavis
           "migration.rb",
           "db/migrate/#{migration_number}_create_clavis_oauth_identities.rb"
         )
+        say_status :migration, "Created db/migrate/#{migration_number}_create_clavis_oauth_identities.rb", :green
       end
 
       def create_user_migration
         return if migration_exists?("db/migrate", "add_oauth_to_users")
 
         # Check if the users table exists
-        if ActiveRecord::Base.connection.table_exists?(:users)
-          migration_number = self.class.next_migration_number("db/migrate")
+        return unless table_exists?("users")
 
-          # Create the migration file with direct content rather than ERB template
-          create_file "db/migrate/#{migration_number}_add_oauth_to_users.rb", <<~RUBY
-            # frozen_string_literal: true
+        migration_number = self.class.next_migration_number("db/migrate")
+        @migration_class_name = "AddOauthToUsers"
 
-            class AddOauthToUsers < ActiveRecord::Migration[#{ActiveRecord::Migration.current_version}]
-              def change
-                # These are OPTIONAL fields for your User model that might be useful for OAuth
-                # Uncomment the ones you'd like to use
-
-                # Cache the avatar URL from OAuth for quicker access
-                # add_column :users, :avatar_url, :string, null: true
-
-                # Track when the user last authenticated via OAuth
-                # add_column :users, :last_oauth_login_at, :datetime, null: true
-            #{"    "}
-                # Track which provider was most recently used
-                # add_column :users, :last_oauth_provider, :string, null: true
-            #{"    "}
-                # Remember if the user is primarily an OAuth user
-                # add_column :users, :oauth_user, :boolean, default: false
-            #{"    "}
-                # Note: All OAuth identity information (tokens, credentials, etc.) is#{" "}
-                # stored in the clavis_oauth_identities table, not directly on the User.
-              end
-            end
-          RUBY
-        else
-          say "Skipping User table migration because users table doesn't exist."
-          say "Run 'rails g model User' first if you want to add OAuth fields to your User model."
-        end
+        template(
+          "add_oauth_to_users.rb",
+          "db/migrate/#{migration_number}_add_oauth_to_users.rb"
+        )
+        say_status :migration, "Created db/migrate/#{migration_number}_add_oauth_to_users.rb", :green
       end
 
-      def migration_exists?(dir, name)
-        Dir.glob("#{dir}/[0-9]*_*.rb").grep(/\d+_#{name}.rb$/).first
+      # Check if a migration with a given name already exists
+      def migration_exists?(dirname, migration_name)
+        Dir.glob("#{dirname}/[0-9]*_*.rb").grep(/\d+_#{migration_name}.rb$/).any?
+      end
+
+      # Check if a table exists in the database
+      def table_exists?(table_name)
+        ActiveRecord::Base.connection.table_exists?(table_name)
+      rescue ActiveRecord::NoDatabaseError
+        say_status :error, "No database connection. Run 'rails db:create' first.", :red
+        false
       end
 
       def providers

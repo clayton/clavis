@@ -27,80 +27,136 @@ module Clavis
             included do
               include Clavis::Models::OauthAuthenticatable if defined?(Clavis::Models::OauthAuthenticatable)
           #{"    "}
-              # Skip password validation for OAuth users
-              # Uncomment this if your User model requires a password but you want to skip it for OAuth users
-              # validates :password, presence: true, unless: :oauth_user?
+              # Add a temporary attribute to track OAuth authentication during user creation
+              # This can be used to conditionally skip password validation for OAuth users
+              attr_accessor :skip_password_validation
+          #{"    "}
+              # IMPORTANT: If your User model uses has_secure_password, you need to handle
+              # password validation. Uncomment and modify ONE of these approaches:
+              #
+              # APPROACH 1: Skip password validation for OAuth users (recommended)
+              # validates :password, presence: true, length: { minimum: 8 },
+              #           unless: -> { skip_password_validation }, on: :create
+              #
+              # APPROACH 2: Set a random secure password for OAuth users
+              # before_validation :set_random_password, if: -> { skip_password_validation && respond_to?(:password=) }
+              #
+              # APPROACH 3: Use validate: false for OAuth users (less recommended)
+              # See the #find_or_create_from_clavis method below
+          #{"    "}
+              # For approach 2, add this method
+              # def set_random_password
+              #   self.password = SecureRandom.hex(16)
+              #   self.password_confirmation = password if respond_to?(:password_confirmation=)
+              # end
             end
-          #{"  "}
+
             class_methods do
               # Find or create a user from OAuth authentication
               # This method is called by Clavis when authenticating via OAuth
               def find_or_create_from_clavis(auth_hash)
                 # First try to find an existing identity
-                identity = Clavis::OauthIdentity.find_by(
-                  provider: auth_hash[:provider],
-                  uid: auth_hash[:uid]
-                )
+                # For OpenID Connect providers like Google, we use the sub claim as the identifier
+                # For other providers, we use the uid
+                identity = if auth_hash[:id_token_claims]&.dig(:sub)
+                            Clavis::OauthIdentity.find_by(
+                              provider: auth_hash[:provider],
+                              uid: auth_hash[:id_token_claims][:sub]
+                            )
+                          else
+                            Clavis::OauthIdentity.find_by(
+                              provider: auth_hash[:provider],
+                              uid: auth_hash[:uid]
+                            )
+                          end
                 return identity.user if identity&.user
-          #{"  "}
-                # Try to find by email if available
-                user = find_by(email: auth_hash.dig(:info, :email)) if auth_hash.dig(:info, :email)
-          #{"  "}
-                # Create a new user if none exists
+
+                # Extract email from auth_hash (try various possible locations)
+                email = extract_email_from_auth_hash(auth_hash)
+          #{"      "}
+                # Try to find existing user by email if available
+                user = find_by(email: email) if email.present?
+          #{"      "}
+                # Create a new user if none found
                 if user.nil?
-                  # IMPORTANT: These are just example fields. Include only the ones your User model needs.
-                  # Available data in auth_hash[:info] typically includes:
-                  # - email: The user's email address
-                  # - name: The user's full name
-                  # - first_name: The user's first name (some providers)
-                  # - last_name: The user's last name (some providers)
-                  # - nickname: The user's username or handle
-                  # - image: URL to the user's profile picture
-                  # - location: The user's location (some providers)
-                  # - verified: Whether the email is verified (some providers)
-                  #
-                  # Add ALL required fields for YOUR User model below.
-                  # The only field we set by default is email.
-                  # YOU MUST customize this for your application!
+                  # Convert to HashWithIndifferentAccess for reliable key access
+                  info = auth_hash[:info].with_indifferent_access if auth_hash[:info]
+                  claims = auth_hash[:id_token_claims].with_indifferent_access if auth_hash[:id_token_claims]
           #{"        "}
                   user = new(
-                    email: auth_hash.dig(:info, :email)
+                    email: email
                     # Add other required fields for your User model here, for example:
-                    # name: auth_hash.dig(:info, :name),
-                    # first_name: auth_hash.dig(:info, :first_name),
-                    # last_name: auth_hash.dig(:info, :last_name),
-                    # username: auth_hash.dig(:info, :nickname),
+                    ##{" "}
+                    # With HashWithIndifferentAccess, access is reliable regardless of key type:
+                    # first_name: info&.dig(:given_name) || info&.dig(:first_name),
+                    # last_name: info&.dig(:family_name) || info&.dig(:last_name),
+                    # name: info&.dig(:name),
+                    # username: info&.dig(:nickname),
+                    # avatar_url: info&.dig(:picture) || info&.dig(:image),
                     # terms_accepted: true # for required boolean fields
                   )
           #{"        "}
-                  # NOTE: For password-protected User models, we recommend using the#{" "}
-                  # conditional validation above instead of setting a random password
+                  # Mark this user as coming from OAuth to skip password validation
+                  # This works with the validation conditionals defined above
+                  user.skip_password_validation = true
           #{"        "}
+                  # APPROACH 1 & 2: Use standard save with conditional validation
                   user.save!
+          #{"        "}
+                  # APPROACH 3: Bypass validations entirely - use with caution, and only if approaches 1 & 2 don't work
+                  # If your User model has complex validations that are incompatible with OAuth users,
+                  # you might need to bypass validations. Uncomment this if needed:
+                  # user.save(validate: false)
                 end
           #{"  "}
-                # Create or update the OAuth identity for this user
-                # All OAuth-specific information is stored here, not on the User model
+                # Create or update the OAuth identity
                 identity = Clavis::OauthIdentity.find_or_initialize_by(
                   provider: auth_hash[:provider],
-                  uid: auth_hash[:uid]
+                  uid: auth_hash[:id_token_claims]&.dig(:sub) || auth_hash[:uid]
                 )
-          #{"      "}
-                identity.update!(
-                  user: user,
-                  auth_data: auth_hash[:info],
-                  token: auth_hash.dig(:credentials, :token),
-                  refresh_token: auth_hash.dig(:credentials, :refresh_token),
-                  expires_at: auth_hash.dig(:credentials, :expires_at)
-                )
+                identity.user = user
+                identity.auth_data = auth_hash[:info]
+                identity.token = auth_hash.dig(:credentials, :token)
+                identity.refresh_token = auth_hash.dig(:credentials, :refresh_token)
+                identity.expires_at = auth_hash.dig(:credentials, :expires_at) ? Time.at(auth_hash.dig(:credentials, :expires_at)) : nil
+                identity.save!
           #{"  "}
+                # Set the oauth_user flag if available
+                user.update(oauth_user: true) if user.respond_to?(:oauth_user=)
+          #{"      "}
                 # Optional: Update any fields on the User model that you want to keep in sync
                 # user.update(
                 #   avatar_url: auth_hash.dig(:info, :image),
-                #   last_oauth_login_at: Time.current
+                #   last_oauth_login_at: Time.current,
+                #   last_oauth_provider: auth_hash[:provider]
                 # )
           #{"  "}
                 user
+              end
+          #{"    "}
+              private
+          #{"    "}
+              # Helper method to extract email from various locations in the auth hash
+              def extract_email_from_auth_hash(auth_hash)
+                return nil unless auth_hash
+          #{"      "}
+                # Try to get email from various possible locations
+                if auth_hash[:info]&.with_indifferent_access
+                  info = auth_hash[:info].with_indifferent_access
+                  return info[:email] if info[:email].present?
+                end
+          #{"      "}
+                if auth_hash[:id_token_claims]&.with_indifferent_access
+                  claims = auth_hash[:id_token_claims].with_indifferent_access
+                  return claims[:email] if claims[:email].present?
+                end
+          #{"      "}
+                if auth_hash[:extra]&.dig(:raw_info)&.with_indifferent_access
+                  raw_info = auth_hash[:extra][:raw_info].with_indifferent_access
+                  return raw_info[:email] if raw_info[:email].present?
+                end
+          #{"      "}
+                nil
               end
             end
           end
@@ -147,11 +203,14 @@ module Clavis
         say "\n⚠️  IMPORTANT: You must customize the user creation code to match your User model!"
         say "The default implementation only sets the email field, which may not be sufficient."
 
+        say "\n⚠️  IMPORTANT: If your User model uses has_secure_password, you need to handle password validation!"
+        say "Look for the password validation section in app/models/concerns/clavis_user_methods.rb and"
+        say "uncomment one of the approaches described there."
+
         say "\nTo customize:"
         say "  1. Edit app/models/concerns/clavis_user_methods.rb"
         say "  2. Add required fields to the user creation in find_or_create_from_clavis"
-        say "  3. If your User model requires a password, uncomment the conditional validation:"
-        say "     validates :password, presence: true, unless: :oauth_user?"
+        say "  3. Handle password validation if your model uses has_secure_password"
 
         say "\nFor more information, see the documentation at https://github.com/clayton/clavis"
       end

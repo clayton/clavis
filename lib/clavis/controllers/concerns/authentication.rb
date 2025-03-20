@@ -27,7 +27,8 @@ module Clavis
           end
 
           Rails.logger.debug "CLAVIS DEBUG: About to check if provider '#{provider_name}' is configured"
-          Rails.logger.debug "CLAVIS DEBUG: Available providers in config: #{Clavis.configuration.providers.keys.inspect}"
+          Rails.logger.debug "CLAVIS DEBUG: Available providers in config: " \
+                             "#{Clavis.configuration.providers.keys.inspect}"
 
           begin
             # Explicitly validate provider - this will raise Clavis::ProviderNotConfigured if not configured
@@ -160,7 +161,7 @@ module Clavis
           rescue StandardError => e
             Rails.logger.error "Clavis: OAuth callback error: #{e.class.name} - #{e.message}" if defined?(Rails)
             Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}" if defined?(Rails) && e.backtrace
-            raise Clavis::AuthenticationError.new(e.message)
+            raise Clavis::AuthenticationError, e.message
           end
         end
 

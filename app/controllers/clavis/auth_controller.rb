@@ -6,6 +6,7 @@ module Clavis
   # interfere with the OAuth flow
   class AuthController < ::ActionController::Base
     include Clavis::Controllers::Concerns::Authentication
+    include Clavis::Controllers::Concerns::SessionManagement
 
     # Add basic controller setup
     protect_from_forgery with: :exception
@@ -17,9 +18,10 @@ module Clavis
     skip_before_action :verify_authenticity_token, only: [:callback]
 
     def authorize
-      Rails.logger.debug "CLAVIS DEBUG: AuthController#authorize called with params: #{params.inspect}"
+      # Store the current URL for returning after authentication
+      store_location if request.get?
+
       oauth_authorize
-      Rails.logger.debug "CLAVIS DEBUG: AuthController#authorize completed"
     end
 
     def callback
@@ -29,12 +31,24 @@ module Clavis
         if respond_to?(:clavis_authentication_success)
           clavis_authentication_success(user, auth_hash)
         else
-          # Default behavior: set user_id in session and redirect to root
-          session[:user_id] = user.id if user.respond_to?(:id)
-          redirect_to main_app.root_path, notice: "Successfully signed in with #{params[:provider].capitalize}"
+          # Use the SessionManagement method to sign in the user with secure cookies
+          sign_in_user(user)
+
+          # DEBUG: Log the redirect path
+          redirect_path = after_login_path
+          Rails.logger.debug "CLAVIS DEBUG: Redirecting after login to: #{redirect_path}"
+
+          # Force redirect to root path if it's redirecting to auth path
+          if redirect_path.include?("/auth/")
+            Rails.logger.debug "CLAVIS DEBUG: Detected potential redirect loop to auth path. " \
+                               "Redirecting to root instead."
+            redirect_path = defined?(main_app) && main_app.respond_to?(:root_path) ? main_app.root_path : "/"
+          end
+
+          redirect_to redirect_path, notice: "Successfully signed in with #{params[:provider].capitalize}"
         end
       end
-    rescue Clavis::AuthenticationError => e
+    rescue StandardError => e
       Clavis::Logging.log_error(e)
 
       if respond_to?(:clavis_authentication_failure)
@@ -50,18 +64,21 @@ module Clavis
                           "Authentication failed: #{e.message}"
                         end
 
-        # Safe redirect to root_path or fallback to "/"
-        safe_redirect
+        # Safe redirect to after_login_path
+        redirect_to after_login_path
       end
     end
 
     private
 
     def find_or_create_user_from_oauth(auth_hash)
-      if defined?(User) && User.respond_to?(:find_for_oauth)
-        User.find_for_oauth(auth_hash)
+      user_class = Clavis.configuration.user_class.constantize
+      finder_method = Clavis.configuration.user_finder_method
+
+      if user_class.respond_to?(finder_method)
+        user_class.public_send(finder_method, auth_hash)
       else
-        # If no User model is available, just return the auth hash
+        # If no suitable method is available, just return the auth hash
         auth_hash
       end
     end
@@ -105,6 +122,18 @@ module Clavis
         Clavis::Logging.log_error("Redirect error: #{e.message}. Falling back to '/'")
         redirect_to "/"
       end
+    end
+
+    # Override default_path to ensure we don't redirect back to auth paths
+    def default_path
+      path = if defined?(main_app) && main_app.respond_to?(:root_path)
+               main_app.root_path
+             else
+               "/"
+             end
+
+      Rails.logger.debug "CLAVIS DEBUG: Using default path: #{path}"
+      path
     end
   end
 end

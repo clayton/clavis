@@ -10,7 +10,8 @@ module Clavis
                   :raise_on_invalid_redirect, :enforce_https, :allow_http_localhost, :verify_ssl,
                   :minimum_tls_version, :validate_inputs, :sanitize_inputs, :rotate_session_after_login,
                   :session_key_prefix, :logger, :log_level, :token_encryption_key, :csrf_protection_enabled,
-                  :valid_redirect_schemes, :view_helpers_auto_include, :user_class, :user_finder_method
+                  :valid_redirect_schemes, :view_helpers_auto_include, :user_class, :user_finder_method,
+                  :rate_limiting_enabled, :custom_throttles
 
     def initialize
       @providers = {}
@@ -56,6 +57,10 @@ module Clavis
       # User creation configuration
       @user_class = "User"
       @user_finder_method = :find_or_create_from_clavis
+
+      # Rate limiting configuration
+      @rate_limiting_enabled = true
+      @custom_throttles = {}
     end
 
     # Returns the list of supported providers
@@ -76,57 +81,68 @@ module Clavis
     end
 
     def provider_configured?(provider_name)
-      Rails.logger.debug "CLAVIS DEBUG: provider_configured? check for provider: #{provider_name}"
       provider_sym = provider_name.to_sym
-      Rails.logger.debug "CLAVIS DEBUG: Available providers: #{providers.keys.inspect}"
 
       # Check if the provider is defined in the configuration
-      unless providers&.key?(provider_sym)
-        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is not defined in the configuration"
-        Clavis::Logging.log_error("Provider '#{provider_name}' is not defined in the configuration")
-        return false
-      end
+      return false unless providers&.key?(provider_sym)
 
       provider_config = providers[provider_sym]
-      Rails.logger.debug "CLAVIS DEBUG: Provider config: #{provider_config.inspect}"
+
+      # Handle empty provider config or non-hash values
+      return false unless provider_config.is_a?(Hash)
 
       # Check for required credentials
-      if provider_config[:client_id].nil? || provider_config[:client_id].empty?
-        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is missing client_id"
+      if provider_config[:client_id].nil? || provider_config[:client_id].to_s.strip.empty?
         Clavis::Logging.log_error("Provider '#{provider_name}' is missing client_id")
         return false
       end
 
-      if provider_config[:client_secret].nil? || provider_config[:client_secret].empty?
-        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is missing client_secret"
+      if provider_config[:client_secret].nil? || provider_config[:client_secret].to_s.strip.empty?
         Clavis::Logging.log_error("Provider '#{provider_name}' is missing client_secret")
         return false
       end
 
-      # Check for redirect_uri if required by provider
-      if %i[google github facebook microsoft].include?(provider_sym) &&
-         (provider_config[:redirect_uri].nil? || provider_config[:redirect_uri].empty?)
-        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is missing redirect_uri"
+      # Apple doesn't always require a redirect_uri
+      if provider_sym != :apple &&
+         (provider_config[:redirect_uri].nil? ||
+          provider_config[:redirect_uri].to_s.strip.empty?)
         Clavis::Logging.log_error("Provider '#{provider_name}' is missing redirect_uri")
         return false
       end
 
       # All checks passed
-      Rails.logger.debug "CLAVIS DEBUG: Provider '#{provider_name}' is properly configured"
       true
     end
 
     def validate_provider!(provider_name)
-      Rails.logger.debug "CLAVIS DEBUG: validate_provider! called for #{provider_name}"
-      result = provider_configured?(provider_name)
-      Rails.logger.debug "CLAVIS DEBUG: provider_configured? returned #{result.inspect}"
+      provider_sym = provider_name.to_sym
 
-      unless result
-        Rails.logger.error "CLAVIS DEBUG: Provider '#{provider_name}' is not configured properly"
-        raise Clavis::ProviderNotConfigured, provider_name
+      # Check if the provider is defined in the configuration
+      unless providers&.key?(provider_sym)
+        raise Clavis::ProviderNotConfigured, "Provider '#{provider_name}' is not defined in the configuration"
       end
 
-      Rails.logger.debug "CLAVIS DEBUG: Provider '#{provider_name}' validation successful"
+      provider_config = providers[provider_sym]
+
+      # Handle empty provider config or non-hash values
+      unless provider_config.is_a?(Hash)
+        raise Clavis::ProviderNotConfigured, "Provider '#{provider_name}' has invalid configuration"
+      end
+
+      # Check for required credentials
+      if provider_config[:client_id].nil? || provider_config[:client_id].to_s.strip.empty?
+        raise Clavis::ProviderNotConfigured, "Provider '#{provider_name}' is missing client_id"
+      end
+
+      if provider_config[:client_secret].nil? || provider_config[:client_secret].to_s.strip.empty?
+        raise Clavis::ProviderNotConfigured, "Provider '#{provider_name}' is missing client_secret"
+      end
+
+      # Apple doesn't always require a redirect_uri
+      return if provider_sym == :apple
+      return unless provider_config[:redirect_uri].nil? || provider_config[:redirect_uri].to_s.strip.empty?
+
+      raise Clavis::ProviderNotConfigured, "Provider '#{provider_name}' is missing redirect_uri"
     end
 
     def provider_config(provider_name)
@@ -144,8 +160,18 @@ module Clavis
     end
 
     def callback_path(provider_name)
-      path = provider_config(provider_name)[:redirect_uri] || default_callback_path
-      path.gsub(":provider", provider_name.to_s)
+      provider_name = provider_name.to_sym if provider_name.is_a?(String)
+
+      # Ensure the provider is configured properly first
+      provider_cfg = provider_config(provider_name)
+
+      # Use provider's redirect_uri if specified, otherwise use default
+      path = provider_cfg[:redirect_uri] || default_callback_path
+
+      # Replace :provider placeholder with the actual provider name
+      path = path.gsub(":provider", provider_name.to_s) if path.include?(":provider")
+
+      path
     end
 
     def effective_encryption_key

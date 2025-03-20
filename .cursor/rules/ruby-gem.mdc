@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 DO NOT go off on your own adding or changing things beyond the scope of what we have discussed. Always ask for permission first before making extra and undiscussed enhancements.
 

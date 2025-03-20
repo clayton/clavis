@@ -157,6 +157,55 @@ module Clavis
           end
         end
 
+        # Rotate session to improve security after login
+        # @param request [ActionDispatch::Request] The current request
+        def rotate_session(request)
+          return unless Clavis.configuration.rotate_session_after_login
+          return unless request.respond_to?(:session)
+
+          if defined?(Rails) && Rails.version.to_f >= 6.0
+            # For Rails 6.0+, use the built-in reset_session functionality
+            # but preserve all session data
+            old_session_data = {}
+
+            # Copy all session data
+            request.session.each do |key, value|
+              old_session_data[key] = value
+            end
+
+            # Reset the session
+            request.env["rack.session.options"][:renew] = true
+            request.reset_session
+
+            # Restore session data
+            old_session_data.each do |key, value|
+              request.session[key] = value
+            end
+          else
+            # For older Rails versions or non-Rails apps, use our custom implementation
+            keys_to_preserve = request.session.respond_to?(:keys) ? request.session.keys.map(&:to_sym) : []
+            new_session_id = SecureRandom.hex(32)
+            rotate_session_id(request.session, new_session_id, preserve_keys: keys_to_preserve)
+          end
+        end
+
+        # Store authentication information in the session
+        # @param session [Hash] The session hash
+        # @param auth_hash [Hash] The authentication hash
+        def store_auth_info(session, auth_hash)
+          return unless auth_hash
+
+          # Store minimal information in the session
+          store(session, :provider, auth_hash[:provider])
+          store(session, :uid, auth_hash[:uid])
+
+          # Store email if available
+          store(session, :email, auth_hash.dig(:info, :email)) if auth_hash.dig(:info, :email)
+
+          # Store name if available
+          store(session, :name, auth_hash.dig(:info, :name)) if auth_hash.dig(:info, :name)
+        end
+
         private
 
         # Create a namespaced key for session storage

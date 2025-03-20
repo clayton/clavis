@@ -21,6 +21,7 @@ Metrics/MethodLength:
     - 'spec/**/*'
     - 'lib/clavis/controllers/concerns/authentication.rb'
     - 'lib/clavis/providers/base.rb'
+    - 'lib/generators/clavis/user_method/user_method_generator.rb'
 
 Metrics/AbcSize:
   Max: 45
@@ -28,6 +29,8 @@ Metrics/AbcSize:
     - 'spec/**/*'
     - 'lib/clavis/providers/base.rb'
     - 'lib/clavis/controllers/concerns/authentication.rb'
+    - 'lib/clavis.rb'
+    - 'lib/generators/clavis/install_generator.rb'
 
 Metrics/CyclomaticComplexity:
   Max: 20
@@ -79,3 +82,7 @@ Lint/MissingSuper:
   Exclude:
     - 'spec/dummy/app/models/application_record.rb'
     - 'spec/dummy/app/models/user.rb'
+
+Naming/VariableNumber:
+  Exclude:
+    - 'lib/clavis/engine.rb'

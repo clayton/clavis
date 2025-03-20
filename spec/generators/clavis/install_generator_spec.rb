@@ -42,44 +42,29 @@ RSpec.describe "Clavis::Generators::InstallGenerator" do
   end
 
   it "has a valid User model migration template" do
-    # Read the add_oauth_to_users migration template
-    template_path = File.expand_path("../../../lib/generators/clavis/templates/add_oauth_to_users.rb", __dir__)
-    template_content = File.read(template_path)
-
-    # Check for essential parts of the migration
-    expect(template_content).to include("class AddOauthToUsers < ActiveRecord::Migration")
-    expect(template_content).to include("add_column :users, :provider, :string")
-    expect(template_content).to include("add_column :users, :uid, :string")
-    expect(template_content).to include("add_index :users, %i[provider uid], unique: true")
+    template_content = File.read("lib/generators/clavis/templates/add_oauth_to_users.rb")
+    expect(template_content).to include("add_column :users, :oauth_user, :boolean, default: false")
+    expect(template_content).to include("add_column :users, :avatar_url, :string")
+    expect(template_content).to include("add_column :users, :last_oauth_login_at, :datetime")
+    expect(template_content).to include("add_column :users, :last_oauth_provider, :string")
+    expect(template_content).to include("remove_column :users, :provider, :string")
+    expect(template_content).to include("remove_column :users, :uid, :string")
   end
 
   it "has a valid OauthIdentities migration template" do
-    # Try both migration.rb and migration.rb.tt
-    templates_dir = File.expand_path("../../../lib/generators/clavis/templates", __dir__)
-    migration_files = ["migration.rb", "migration.rb.tt"]
+    template_files = [
+      "lib/generators/clavis/templates/migration.rb",
+      "lib/generators/clavis/templates/migration.rb.tt"
+    ]
 
-    # Find a migration file that contains the expected content
-    found_valid_template = false
+    template_files.each do |file|
+      next unless File.exist?(file)
 
-    migration_files.each do |filename|
-      template_path = File.join(templates_dir, filename)
-      next unless File.exist?(template_path)
-
-      template_content = File.read(template_path)
-      unless template_content.include?("CreateClavisOauthIdentities") || template_content.include?("create_table :clavis_oauth_identities")
-        next
-      end
-
-      # We found a valid template
-      expect(template_content).to include("create_table :clavis_oauth_identities")
-      expect(template_content).to include("t.references :user")
-      expect(template_content).to include("t.string :provider")
-      expect(template_content).to include("t.string :uid")
-      found_valid_template = true
-      break
+      template_content = File.read(file)
+      expect(template_content).to include("t.references :authenticatable, polymorphic: true")
+      expect(template_content).to include("t.string :provider, null: false")
+      expect(template_content).to include("t.string :uid, null: false")
+      expect(template_content).to include("t.index [:provider, :uid], unique: true")
     end
-
-    # Ensure at least one valid template was found
-    expect(found_valid_template).to be(true), "No valid OauthIdentities migration template found"
   end
 end

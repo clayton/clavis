@@ -60,4 +60,17 @@ Clavis.configure do |config|
   # Session management (enabled by default)
   # config.rotate_session_after_login = true # Rotate session ID after login
   # config.session_key_prefix = 'clavis' # Prefix for session keys
+  
+  # Rate limiting (enabled by default)
+  # Requires rack-attack gem to be installed in your application
+  # config.rate_limiting_enabled = true # Enable rate limiting for OAuth endpoints
+  
+  # Custom throttle rules (optional)
+  # config.custom_throttles = {
+  #   "auth_page_views": {
+  #     limit: 30,
+  #     period: 1.minute,
+  #     block: ->(req) { req.path == "/login" ? req.ip : nil }
+  #   }
+  # }
 end 

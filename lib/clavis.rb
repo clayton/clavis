@@ -13,6 +13,7 @@ require_relative "clavis/security/redirect_uri_validator"
 require_relative "clavis/security/https_enforcer"
 require_relative "clavis/security/input_validator"
 require_relative "clavis/security/session_manager"
+require_relative "clavis/security/rate_limiter"
 require "clavis/user_info_normalizer"
 
 # Only load provider classes if they're not already defined (for testing)
@@ -29,6 +30,7 @@ end
 require_relative "clavis/oauth_identity"
 require_relative "clavis/models/concerns/oauth_authenticatable"
 require_relative "clavis/controllers/concerns/authentication"
+require_relative "clavis/controllers/concerns/session_management"
 require_relative "clavis/view_helpers"
 
 # Required for delegate method
