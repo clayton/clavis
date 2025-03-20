@@ -81,6 +81,16 @@ module Clavis
         log("Authorization callback for #{provider}: #{success ? "success" : "failed"}")
       end
 
+      # Log token verification results
+      def log_token_verification(provider, success, details = nil)
+        log("Token verification for #{provider}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
+      end
+
+      # Log hosted domain verification results
+      def log_hosted_domain_verification(provider, success, details = nil)
+        log("Hosted domain verification for #{provider}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
+      end
+
       private
 
       # Filter potentially sensitive data from log messages

@@ -60,6 +60,12 @@ module Clavis
     end
   end
 
+  class InvalidHostedDomain < ProviderError
+    def initialize(message = "User is not a member of the allowed hosted domain")
+      super
+    end
+  end
+
   # OAuth errors
   class OAuthError < Error
     def initialize(message = "OAuth error")
@@ -86,6 +92,12 @@ module Clavis
   class MissingState < AuthorizationError
     def initialize
       super("Missing state parameter in callback")
+    end
+  end
+
+  class ExpiredState < AuthorizationError
+    def initialize
+      super("State token has expired")
     end
   end
 
