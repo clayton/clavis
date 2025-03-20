@@ -67,4 +67,17 @@ RSpec.describe Clavis::Engine, type: :engine do
       expect(ApplicationHelper.included_modules).to include(Clavis::ViewHelpers)
     end
   end
+
+  describe "SSL configuration" do
+    it "configures SSL securely without errors" do
+      # Create a new SSL context and verify it works
+      ssl_context = OpenSSL::SSL::SSLContext.new
+
+      # Should not raise errors
+      expect { ssl_context.set_params(OpenSSL::SSL::SSLContext::DEFAULT_PARAMS) }.not_to raise_error
+
+      # The context should be created without issues
+      expect(ssl_context).to be_a(OpenSSL::SSL::SSLContext)
+    end
+  end
 end

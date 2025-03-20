@@ -301,7 +301,6 @@ module Clavis
 
         # Validate token response (disable for debugging)
         # unless Clavis::Security::InputValidator.valid_token_response?(result)
-        #  Rails.logger.error("Invalid token response: #{result.inspect}")
         #  return {}
         # end
 

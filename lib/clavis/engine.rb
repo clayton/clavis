@@ -22,11 +22,13 @@ module Clavis
       # Set minimum TLS version to 1.2 for security
       # Can be upgraded to TLS 1.3 when supported by all platforms
       begin
-        OpenSSL::SSL::SSLContext::DEFAULT_PARAMS[:ssl_version] = :tlsv1_2
-        OpenSSL::SSL::SSLContext::DEFAULT_PARAMS[:min_version] = OpenSSL::SSL::TLS1_2_VERSION
-      rescue NameError
-        # Ruby or OpenSSL version might not support TLS 1.2
-        # In this case, we let the system use its default
+        # Use min_version instead of ssl_version for better compatibility
+        if defined?(OpenSSL::SSL::TLS1_2_VERSION)
+          OpenSSL::SSL::SSLContext::DEFAULT_PARAMS[:min_version] = OpenSSL::SSL::TLS1_2_VERSION
+        end
+      rescue StandardError => e
+        # Log the error but don't crash
+        Clavis.logger.warn("Could not set minimum TLS version: #{e.message}")
       end
     end
 

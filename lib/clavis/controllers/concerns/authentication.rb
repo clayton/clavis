@@ -9,16 +9,12 @@ module Clavis
         extend ActiveSupport::Concern
 
         def oauth_authorize
-          Rails.logger.debug "CLAVIS DEBUG: Starting oauth_authorize method"
           provider_name = params[:provider]
-          Rails.logger.debug "CLAVIS DEBUG: Provider name from params: #{provider_name.inspect}"
 
           # Check if provider is specified
           if provider_name.blank?
-            Rails.logger.debug "CLAVIS DEBUG: Provider name is blank"
             error_message = "No provider specified for OAuth authentication"
             Clavis::Logging.log_error(error_message)
-            Rails.logger.error "CLAVIS DEBUG: #{error_message}"
 
             # Return a meaningful error to the user
             flash[:alert] = "Authentication provider not specified. Please try again or contact support."
@@ -26,35 +22,23 @@ module Clavis
             return
           end
 
-          Rails.logger.debug "CLAVIS DEBUG: About to check if provider '#{provider_name}' is configured"
-          Rails.logger.debug "CLAVIS DEBUG: Available providers in config: " \
-                             "#{Clavis.configuration.providers.keys.inspect}"
-
           begin
             # Explicitly validate provider - this will raise Clavis::ProviderNotConfigured if not configured
-            Rails.logger.debug "CLAVIS DEBUG: Calling validate_provider! for #{provider_name}"
             Clavis.configuration.validate_provider!(provider_name)
-            Rails.logger.debug "CLAVIS DEBUG: Provider validated successfully"
 
             # Initialize the provider - if it fails, let the exception bubble up
-            Rails.logger.debug "CLAVIS DEBUG: Initializing provider #{provider_name}"
             provider = Clavis.provider(provider_name)
-            Rails.logger.debug "CLAVIS DEBUG: Provider initialized: #{provider.class.name}"
 
             # Validate and store redirect URI if provided
             if params[:redirect_uri].present?
-              Rails.logger.debug "CLAVIS DEBUG: Storing redirect_uri: #{params[:redirect_uri]}"
               Clavis::Security::SessionManager.store_redirect_uri(session, params[:redirect_uri])
             end
 
             # Generate and store state and nonce in session
-            Rails.logger.debug "CLAVIS DEBUG: Generating state and nonce"
             state = Clavis::Security::SessionManager.generate_and_store_state(session)
             nonce = Clavis::Security::SessionManager.generate_and_store_nonce(session)
-            Rails.logger.debug "CLAVIS DEBUG: State generated: #{state[0..5]}... (truncated)"
 
             # Log parameters safely
-            Rails.logger.debug "CLAVIS DEBUG: Logging parameters for OAuth flow"
             Clavis::Security::ParameterFilter.log_parameters(
               { provider: provider_name, scope: params[:scope] },
               level: :info,
@@ -63,38 +47,27 @@ module Clavis
 
             # Validate inputs
             scope = params[:scope] || Clavis.configuration.default_scopes
-            Rails.logger.debug "CLAVIS DEBUG: Using scope: #{scope.inspect}"
             Clavis::Security::InputValidator.sanitize(scope)
 
             # Generate the authorization URL and redirect
-            Rails.logger.debug "CLAVIS DEBUG: Generating authorization URL"
             auth_url = provider.authorize_url(
               state: state,
               nonce: nonce,
               scope: scope
             )
 
-            Rails.logger.debug "CLAVIS DEBUG: Authorization URL generated: #{auth_url}"
-            Rails.logger.debug "CLAVIS DEBUG: Redirecting to authorization URL"
-
             redirect_to auth_url, allow_other_host: true
-            Rails.logger.debug "CLAVIS DEBUG: Redirect initiated"
           rescue StandardError => e
-            Rails.logger.error "CLAVIS DEBUG: Error in oauth_authorize: #{e.class.name} - #{e.message}"
-            Rails.logger.error "CLAVIS DEBUG: Backtrace: #{e.backtrace.join("\n")}"
-
             # Only rescue non-configuration errors
-            if e.is_a?(Clavis::ProviderNotConfigured) || e.is_a?(Clavis::ConfigurationError)
-              # Re-raise configuration errors to make them visible
-              Rails.logger.error "CLAVIS DEBUG: Re-raising configuration error"
-              raise
-            else
-              Clavis::Logging.log_error("OAuth flow error: #{e.class.name} - #{e.message}")
-              Clavis::Logging.log_error(e.backtrace.join("\n"))
+            raise if e.is_a?(Clavis::ProviderNotConfigured) || e.is_a?(Clavis::ConfigurationError)
 
-              flash[:alert] = "An error occurred while setting up authentication. Please try again or contact support."
-              redirect_to main_app.respond_to?(:root_path) ? main_app.root_path : "/"
-            end
+            # Re-raise configuration errors to make them visible
+
+            Clavis::Logging.log_error("OAuth flow error: #{e.class.name} - #{e.message}")
+            Clavis::Logging.log_error(e.backtrace.join("\n"))
+
+            flash[:alert] = "An error occurred while setting up authentication. Please try again or contact support."
+            redirect_to main_app.respond_to?(:root_path) ? main_app.root_path : "/"
           end
         end
 
@@ -159,8 +132,6 @@ module Clavis
             # Yield to block for custom processing
             yield(user, auth_hash) if block_given?
           rescue StandardError => e
-            Rails.logger.error "Clavis: OAuth callback error: #{e.class.name} - #{e.message}" if defined?(Rails)
-            Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}" if defined?(Rails) && e.backtrace
             raise Clavis::AuthenticationError, e.message
           end
         end

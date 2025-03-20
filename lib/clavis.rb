@@ -58,10 +58,8 @@ module Clavis
     attr_writer :configuration
 
     def configure
-      Rails.logger.debug "CLAVIS DEBUG: Clavis.configure called"
       yield(configuration) if block_given?
       configuration.post_initialize
-      Rails.logger.debug "CLAVIS DEBUG: Clavis.configure completed, providers: #{configuration.providers.keys.inspect}"
     end
 
     def configuration
@@ -73,53 +71,33 @@ module Clavis
     end
 
     def provider(name, options = {})
-      Rails.logger.debug "CLAVIS DEBUG: Clavis.provider called with name: #{name.inspect}"
+      name = name.to_sym
 
-      begin
-        name = name.to_sym
-        Rails.logger.debug "CLAVIS DEBUG: Looking up provider class for #{name}"
+      provider_class = provider_registry[name] ||
+                       case name
+                       when :google
+                         Providers::Google
+                       when :github
+                         Providers::Github
+                       when :facebook
+                         Providers::Facebook
+                       when :apple
+                         Providers::Apple
+                       when :microsoft
+                         Providers::Microsoft
+                       when :generic
+                         Providers::Generic
+                       else
+                         raise UnsupportedProvider, name
+                       end
 
-        provider_class = provider_registry[name] ||
-                         case name
-                         when :google
-                           Rails.logger.debug "CLAVIS DEBUG: Using Google provider class"
-                           Providers::Google
-                         when :github
-                           Rails.logger.debug "CLAVIS DEBUG: Using GitHub provider class"
-                           Providers::Github
-                         when :facebook
-                           Rails.logger.debug "CLAVIS DEBUG: Using Facebook provider class"
-                           Providers::Facebook
-                         when :apple
-                           Rails.logger.debug "CLAVIS DEBUG: Using Apple provider class"
-                           Providers::Apple
-                         when :microsoft
-                           Rails.logger.debug "CLAVIS DEBUG: Using Microsoft provider class"
-                           Providers::Microsoft
-                         when :generic
-                           Rails.logger.debug "CLAVIS DEBUG: Using Generic provider class"
-                           Providers::Generic
-                         else
-                           Rails.logger.error "CLAVIS DEBUG: Unsupported provider: #{name}"
-                           raise UnsupportedProvider, name
-                         end
+      # Merge options with configuration
+      config = configuration.providers[name] || {}
+      config = config.merge(options)
 
-        # Merge options with configuration
-        Rails.logger.debug "CLAVIS DEBUG: Getting provider config from configuration"
-        config = configuration.providers[name] || {}
-        config = config.merge(options)
-        Rails.logger.debug "CLAVIS DEBUG: Final provider config (sanitized): #{config.except(:client_secret).inspect}"
-
-        Rails.logger.debug "CLAVIS DEBUG: Instantiating provider"
-        instance = provider_class.new(config)
-        Rails.logger.debug "CLAVIS DEBUG: Provider instance created: #{instance.class.name}"
-
-        instance
-      rescue StandardError => e
-        Rails.logger.error "CLAVIS DEBUG: Error in Clavis.provider: #{e.class.name} - #{e.message}"
-        Rails.logger.error "CLAVIS DEBUG: Backtrace: #{e.backtrace.join("\n")}"
-        raise
-      end
+      provider_class.new(config)
+    rescue StandardError
+      raise
     end
 
     def register_provider(name, provider_class)
@@ -142,31 +120,6 @@ module Clavis
     def self.setup
       yield(configuration) if block_given?
       configuration.post_initialize
-
-      # Debug provider setup
-      begin
-        Rails.logger.debug "CLAVIS DEBUG: ----------------------------------------------"
-        Rails.logger.debug "CLAVIS DEBUG: Clavis setup complete, dumping configuration:"
-        Rails.logger.debug "CLAVIS DEBUG: Providers configured: #{configuration.providers.keys.inspect}"
-
-        # Check if provider classes are loaded
-        Rails.logger.debug "CLAVIS DEBUG: Provider classes loaded:"
-        [
-          ["Clavis::Providers::Base", defined?(Clavis::Providers::Base)],
-          ["Clavis::Providers::Google", defined?(Clavis::Providers::Google)],
-          ["Clavis::Providers::Github", defined?(Clavis::Providers::Github)],
-          ["Clavis::Providers::Facebook", defined?(Clavis::Providers::Facebook)],
-          ["Clavis::Providers::Apple", defined?(Clavis::Providers::Apple)],
-          ["Clavis::Providers::Microsoft", defined?(Clavis::Providers::Microsoft)]
-        ].each do |provider_class, result|
-          Rails.logger.debug "CLAVIS DEBUG: #{provider_class} loaded? #{result || "No"}"
-        end
-
-        Rails.logger.debug "CLAVIS DEBUG: ----------------------------------------------"
-      rescue StandardError => e
-        Rails.logger.error "CLAVIS DEBUG: Error in Clavis.setup debug: #{e.message}"
-      end
-
       self
     end
   end

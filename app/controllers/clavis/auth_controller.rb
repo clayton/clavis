@@ -34,14 +34,11 @@ module Clavis
           # Use the SessionManagement method to sign in the user with secure cookies
           sign_in_user(user)
 
-          # DEBUG: Log the redirect path
+          # Get the redirect path
           redirect_path = after_login_path
-          Rails.logger.debug "CLAVIS DEBUG: Redirecting after login to: #{redirect_path}"
 
           # Force redirect to root path if it's redirecting to auth path
           if redirect_path.include?("/auth/")
-            Rails.logger.debug "CLAVIS DEBUG: Detected potential redirect loop to auth path. " \
-                               "Redirecting to root instead."
             redirect_path = defined?(main_app) && main_app.respond_to?(:root_path) ? main_app.root_path : "/"
           end
 
@@ -126,14 +123,11 @@ module Clavis
 
     # Override default_path to ensure we don't redirect back to auth paths
     def default_path
-      path = if defined?(main_app) && main_app.respond_to?(:root_path)
-               main_app.root_path
-             else
-               "/"
-             end
-
-      Rails.logger.debug "CLAVIS DEBUG: Using default path: #{path}"
-      path
+      if defined?(main_app) && main_app.respond_to?(:root_path)
+        main_app.root_path
+      else
+        "/"
+      end
     end
   end
 end
