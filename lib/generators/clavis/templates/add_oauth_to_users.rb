@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddOauthToUsers < ActiveRecord::Migration<%= Rails::VERSION::MAJOR %>.<%= Rails::VERSION::MINOR %>
+class AddOauthToUsers < ActiveRecord::Migration[<%= Rails::VERSION::MAJOR %>.<%= Rails::VERSION::MINOR %>]
   def change
     # Add oauth_user flag to identify users created through OAuth
     # This helps with password validation for has_secure_password
