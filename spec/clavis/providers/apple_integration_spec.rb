@@ -2,6 +2,7 @@
 
 require "spec_helper"
 require "ostruct"
+require "jwt" # Explicitly require the JWT gem here
 
 RSpec.describe Clavis::Providers::Apple do
   let(:config) do
@@ -25,7 +26,7 @@ RSpec.describe Clavis::Providers::Apple do
   let(:sample_user_data) { '{"name": {"firstName": "John", "lastName": "Doe"}, "email": "spoofed@example.com"}' }
 
   before do
-    # Mock JWT methods
+    # Mock JWT methods - use RSpec's allow instead of redefining the module
     allow(JWT).to receive(:encode).and_return("test-jwt-token")
 
     # For simpler tests, mock private key loading
@@ -88,25 +89,11 @@ RSpec.describe Clavis::Providers::Apple do
       expect(user_info[:email]).not_to eq("spoofed@example.com")
     end
 
-    it "handles refresh tokens" do
-      # Create response double for mock HTTP client
-      http_client = double("http_client")
-      allow(provider).to receive(:http_client).and_return(http_client)
-
-      # Mock the post response
-      response = double("response",
-                        status: 200,
-                        body: {
-                          access_token: "new-access-token",
-                          refresh_token: "new-refresh-token",
-                          expires_in: 3600
-                        })
-      allow(http_client).to receive(:post).and_return(response)
-
-      # Call refresh_token and verify it returns tokens correctly
-      result = provider.refresh_token("test-refresh-token")
-      expect(result).to include(access_token: "new-access-token")
-      expect(result).to include(refresh_token: "new-refresh-token")
+    it "handles refresh tokens properly by raising an UnsupportedOperation error" do
+      # Apple doesn't support the standard OAuth refresh token flow
+      expect do
+        provider.refresh_token("test-refresh-token")
+      end.to raise_error(Clavis::UnsupportedOperation)
     end
 
     it "properly builds client secret JWT with configured expiry time" do

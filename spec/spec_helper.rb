@@ -24,6 +24,7 @@ RSpec.configure do |config|
 
   # Load the clavis gem
   require "clavis"
+  require "jwt"
   # require "simplecov"
   require "webmock/rspec"
 

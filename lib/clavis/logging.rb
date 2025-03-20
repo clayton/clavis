@@ -88,7 +88,8 @@ module Clavis
 
       # Log hosted domain verification results
       def log_hosted_domain_verification(provider, success, details = nil)
-        log("Hosted domain verification for #{provider}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
+        log("Hosted domain verification for #{provider}: #{success ? "success" : "failed"}" \
+            "#{details ? " - #{details}" : ""}")
       end
 
       # Log custom operation results

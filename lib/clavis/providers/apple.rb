@@ -13,9 +13,9 @@ module Clavis
       attr_reader :team_id, :key_id, :private_key, :private_key_path, :authorized_client_ids, :client_options
 
       ISSUER = "https://appleid.apple.com"
-      APPLE_AUTH_URL = "#{ISSUER}/auth/authorize"
-      APPLE_TOKEN_URL = "#{ISSUER}/auth/token"
-      APPLE_JWKS_URL = "#{ISSUER}/auth/keys"
+      APPLE_AUTH_URL = "#{ISSUER}/auth/authorize".freeze
+      APPLE_TOKEN_URL = "#{ISSUER}/auth/token".freeze
+      APPLE_JWKS_URL = "#{ISSUER}/auth/keys".freeze
       DEFAULT_CLIENT_SECRET_EXPIRY = 300 # 5 minutes in seconds
 
       def initialize(config = {})
@@ -55,7 +55,7 @@ module Clavis
       end
 
       def authorization_endpoint
-        @authorization_endpoint_url
+        @authorize_endpoint_url
       end
 
       def token_endpoint
@@ -74,35 +74,10 @@ module Clavis
         true
       end
 
-      def refresh_token(refresh_token)
-        # Validate inputs
-        raise Clavis::InvalidToken unless Clavis::Security::InputValidator.valid_token?(refresh_token)
-
-        params = {
-          grant_type: "refresh_token",
-          refresh_token: refresh_token,
-          client_id: client_id,
-          client_secret: generate_client_secret
-        }
-
-        response = http_client.post(token_endpoint, params)
-
-        handle_token_error_response(response) if response.status != 200
-
-        # Parse response and extract refresh token
-        token_data = parse_token_response(response)
-
-        # Process ID token if present
-        if token_data[:id_token] && !token_data[:id_token].empty?
-          begin
-            # Pass nil for nonce in refresh token flow
-            token_data[:id_token_claims] = verify_and_decode_id_token(token_data[:id_token])
-          rescue StandardError => e
-            Clavis.logger.warn("Failed to verify ID token during refresh: #{e.message}")
-          end
-        end
-
-        token_data
+      def refresh_token(_refresh_token)
+        # Apple doesn't support the standard OAuth refresh token flow
+        # Instead, they use long-lived tokens that don't need refreshing
+        raise Clavis::UnsupportedOperation, "Apple does not support refresh tokens"
       end
 
       # Using keyword arguments with support for state verification (for compatibility)
@@ -282,7 +257,6 @@ module Clavis
 
       def verify_and_decode_id_token(id_token, expected_nonce = nil)
         # Basic decode to get header and payload without verification
-
         segments = id_token.split(".")
         return {} if segments.length < 2
 

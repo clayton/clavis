@@ -33,7 +33,8 @@ RSpec.describe "Google OAuth Flow" do
         google: {
           client_id: "fake-client-id-123456789.apps.googleusercontent.com",
           client_secret: "fake-client-secret-XXXXXXXXXXXXXXXX",
-          redirect_uri: "http://localhost:3000/auth/google/callback"
+          redirect_uri: "http://localhost:3000/auth/google/callback",
+          verify_token: false # Disable token verification in tests
         }
       }
     end
@@ -58,6 +59,9 @@ RSpec.describe "Google OAuth Flow" do
           body: userinfo_response
         )
       )
+
+    # Stub verify_token to always pass in tests
+    allow_any_instance_of(Clavis::Providers::Google).to receive(:verify_token).and_return(true)
   end
 
   it "processes a Google OAuth callback successfully" do

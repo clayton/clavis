@@ -11,6 +11,11 @@ RSpec.describe "Clavis::Providers::Base response parsing" do
     )
   end
 
+  before do
+    # Disable token verification in tests
+    allow_any_instance_of(Clavis::Providers::Google).to receive(:verify_token).and_return(true)
+  end
+
   describe "#parse_token_response" do
     it "parses JSON string responses" do
       json_body = {

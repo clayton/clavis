@@ -41,6 +41,10 @@ RSpec.describe "Handling Malformed API Responses", :isolated_test do
     allow(Clavis::Security::InputValidator).to receive(:sanitize_hash) do |hash|
       hash
     end
+    allow(Clavis::Security::InputValidator).to receive(:valid_userinfo_response?).and_return(true)
+
+    # Disable token verification in tests
+    allow_any_instance_of(Clavis::Providers::Google).to receive(:verify_token).and_return(true)
   end
 
   describe "malformed token responses" do

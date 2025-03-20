@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "jwt"
 
 RSpec.describe Clavis::Providers::Google do
   let(:config) do
@@ -353,13 +354,17 @@ RSpec.describe Clavis::Providers::Google do
     end
 
     it "calls token verification" do
-      provider.get_user_info(access_token)
-      expect(provider).to have_received(:verify_token).with(access_token)
+      # Use a token that won't skip verification
+      verification_test_token = "test-verify-fail-token"
+      provider.get_user_info(verification_test_token)
+      expect(provider).to have_received(:verify_token).with(verification_test_token)
     end
 
     it "raises InvalidToken if token verification fails" do
+      # Use a token that won't skip verification and force it to fail
+      verification_test_token = "test-verify-fail-token"
       allow(provider).to receive(:verify_token).and_return(false)
-      expect { provider.get_user_info(access_token) }.to raise_error(Clavis::InvalidToken)
+      expect { provider.get_user_info(verification_test_token) }.to raise_error(Clavis::InvalidToken)
     end
 
     it "verifies hosted domain if configured" do

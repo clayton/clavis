@@ -16,6 +16,11 @@ require_relative "clavis/security/session_manager"
 require_relative "clavis/security/rate_limiter"
 require "clavis/user_info_normalizer"
 
+# Load required gems
+require "jwt"
+require "json"
+require "faraday"
+
 # Only load provider classes if they're not already defined (for testing)
 unless defined?(Clavis::Providers::Base)
   require_relative "clavis/providers/base"

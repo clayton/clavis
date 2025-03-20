@@ -40,6 +40,9 @@ RSpec.describe "Provider#process_callback" do
     # Setup userinfo mock
     allow_any_instance_of(Faraday::Connection).to receive(:get)
       .and_return(double(status: 200, body: userinfo_response))
+
+    # Stub verify_token to always return true in tests
+    allow_any_instance_of(Clavis::Providers::Google).to receive(:verify_token).and_return(true)
   end
 
   it "processes OAuth code and returns an auth hash" do

@@ -82,7 +82,8 @@ module Clavis
           )
 
           # Check for error response from provider
-          if params[:error].present?
+          error_param = params[:error]
+          if error_param && !error_param.empty?
             handle_oauth_error(params[:error], params[:error_description])
             return
           end
@@ -101,13 +102,16 @@ module Clavis
 
           begin
             # Special handling for Apple's form_post response which includes user info
-            user_data = params[:user] if provider_name.to_s.downcase == "apple" && params[:user].present?
+            user_data = nil
+            if provider_name.to_s.downcase == "apple" && params[:user] && !params[:user].empty?
+              user_data = params[:user]
+            end
 
             # Get the nonce from session for ID token verification
             Clavis::Security::SessionManager.retrieve_nonce(session)
 
             # Exchange code for tokens and pass user_data if it's Apple
-            auth_hash = if provider_name.to_s.downcase == "apple" && user_data.present?
+            auth_hash = if provider_name.to_s.downcase == "apple" && user_data && !user_data.empty?
                           provider.process_callback(params[:code], user_data)
                         else
                           provider.process_callback(params[:code])
