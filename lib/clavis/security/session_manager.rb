@@ -68,6 +68,16 @@ module Clavis
           nonce
         end
 
+        # Retrieve the stored nonce from the session
+        # @param session [Hash] The session hash
+        # @param clear_after_retrieval [Boolean] Whether to clear the nonce after retrieval
+        # @return [String, nil] The stored nonce or nil if not found
+        def retrieve_nonce(session, clear_after_retrieval: false)
+          nonce = retrieve(session, :oauth_nonce)
+          delete(session, :oauth_nonce) if clear_after_retrieval
+          nonce
+        end
+
         # Check if a nonce is valid
         # @param session [Hash] The session hash
         # @param nonce [String] The nonce to validate

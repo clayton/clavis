@@ -24,6 +24,16 @@ RSpec.configure do |config|
 
   # Load the clavis gem
   require "clavis"
+  # require "simplecov"
+  require "webmock/rspec"
+
+  # Comment out SimpleCov for now to aid debugging
+  # SimpleCov.start do
+  #   add_filter "/spec/"
+  # end
+
+  # Disable external network connections during tests
+  WebMock.disable_net_connect!(allow_localhost: true)
 
   # Load core support files (excluding special purpose files)
   Dir[File.expand_path("support/**/*.rb", __dir__)].each do |f|
@@ -79,4 +89,7 @@ RSpec.configure do |config|
     require "generator_spec/test_case" unless defined?(GeneratorSpec)
     require "support/generator_helpers" unless defined?(GeneratorHelpers)
   end
+
+  # Ensure that dependencies are loaded in the correct order
+  require "bundler/setup"
 end

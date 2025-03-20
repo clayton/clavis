@@ -22,3 +22,7 @@ gem "capybara", "~> 3.39", group: %i[development test]
 gem "sqlite3", "~> 2.1.0", group: %i[development test]
 
 gem "rack-attack", "~> 6.7"
+
+gem "webmock", "~> 3.25", groups: [:test, :development]
+
+gem "simplecov", "~> 0.22.0", groups: [:test, :development]

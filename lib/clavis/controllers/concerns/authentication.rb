@@ -100,8 +100,18 @@ module Clavis
           provider = Clavis.provider(provider_name)
 
           begin
-            # Exchange code for tokens
-            auth_hash = provider.process_callback(params[:code])
+            # Special handling for Apple's form_post response which includes user info
+            user_data = params[:user] if provider_name.to_s.downcase == "apple" && params[:user].present?
+
+            # Get the nonce from session for ID token verification
+            Clavis::Security::SessionManager.retrieve_nonce(session)
+
+            # Exchange code for tokens and pass user_data if it's Apple
+            auth_hash = if provider_name.to_s.downcase == "apple" && user_data.present?
+                          provider.process_callback(params[:code], user_data)
+                        else
+                          provider.process_callback(params[:code])
+                        end
 
             # Find or create the user using the configured class and method
             user_class = Clavis.configuration.user_class.constantize

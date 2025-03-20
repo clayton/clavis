@@ -97,6 +97,38 @@ RSpec.describe "Clavis::Security::SessionManager" do
       # Check that the nonce is cleared
       expect(Clavis::Security::SessionManager.retrieve(session, :oauth_nonce)).to be_nil
     end
+
+    it "retrieves the stored nonce without validation" do
+      session = {}
+
+      # Generate and store nonce
+      original_nonce = Clavis::Security::SessionManager.generate_and_store_nonce(session)
+
+      # Retrieve the nonce without validating
+      retrieved_nonce = Clavis::Security::SessionManager.retrieve_nonce(session)
+
+      # Check that the retrieved nonce matches the original
+      expect(retrieved_nonce).to eq(original_nonce)
+
+      # Check that the nonce is still in the session
+      expect(Clavis::Security::SessionManager.retrieve(session, :oauth_nonce)).to eq(original_nonce)
+    end
+
+    it "clears the nonce after retrieval if requested" do
+      session = {}
+
+      # Generate and store nonce
+      nonce = Clavis::Security::SessionManager.generate_and_store_nonce(session)
+
+      # Retrieve the nonce and clear it
+      retrieved_nonce = Clavis::Security::SessionManager.retrieve_nonce(session, clear_after_retrieval: true)
+
+      # Check that the retrieved nonce matches the original
+      expect(retrieved_nonce).to eq(nonce)
+
+      # Check that the nonce is cleared from the session
+      expect(Clavis::Security::SessionManager.retrieve(session, :oauth_nonce)).to be_nil
+    end
   end
 
   describe "redirect URI management" do
