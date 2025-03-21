@@ -157,8 +157,15 @@ RSpec.describe Clavis::Providers::Github do
       end
 
       it "handles the error response" do
+        # Temporarily unset CLAVIS_SPEC_NO_ERRORS for this specific test
+        original_value = ENV.fetch("CLAVIS_SPEC_NO_ERRORS", nil)
+        ENV["CLAVIS_SPEC_NO_ERRORS"] = nil
+
         expect { provider.token_exchange(code: "invalid-code") }.to raise_error(Clavis::InvalidGrant)
-        expect(Clavis::Logging).to have_received(:log_token_exchange).with(:github, false)
+        expect(Clavis::Logging).to have_received(:log_token_exchange).with(:github, false, "Token exchange failed: The code passed is incorrect or expired.")
+
+        # Restore the environment variable
+        ENV["CLAVIS_SPEC_NO_ERRORS"] = original_value
       end
     end
 

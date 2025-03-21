@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    clavis (0.7.2)
+    clavis (0.7.3)
       faraday (~> 2.7)
       jwt (~> 2.7)
       rack-attack (~> 6.7)

@@ -17,8 +17,10 @@ Clavis.configure do |config|
   # Default scopes to request from providers
   # config.default_scopes = "email profile"
 
-  # Enable verbose logging for debugging
-  # config.verbose_logging = true
+  # Enable verbose logging for authentication processes (disabled by default)
+  # When enabled, this will log details about token exchanges, user info requests,
+  # token refreshes, etc. for debugging purposes
+  # config.verbose_logging = false
   
   # User class and finder method
   # These settings control how Clavis finds or creates users from OAuth data

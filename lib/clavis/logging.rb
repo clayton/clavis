@@ -11,6 +11,24 @@ module Clavis
 
       attr_writer :logger
 
+      # Check if verbose logging is enabled
+      def verbose_logging?
+        return false unless defined?(Clavis.configuration)
+
+        Clavis.configuration.verbose_logging == true
+      end
+
+      # Log debug messages
+      # @param message [String] The message to log
+      def debug(message)
+        return unless logger
+        return if !message || message.empty?
+
+        # Sanitize any potentially sensitive data
+        sanitized_message = filter_sensitive_data(message)
+        logger.debug("[Clavis] #{sanitized_message}")
+      end
+
       # Log informational messages
       # @param message [String] The message to log
       # @param level [Symbol] The log level (:info, :debug, etc.)
@@ -61,33 +79,47 @@ module Clavis
 
       # Older method signatures maintained for compatibility
       def log_token_refresh(provider, success, message = nil)
+        return unless verbose_logging?
+
         log("Token refresh for #{provider}: #{success ? "success" : "failed"}#{message ? " - #{message}" : ""}")
       end
 
       def log_token_exchange(provider, success, details = nil)
+        return unless verbose_logging?
+
         log("Token exchange for #{provider}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
       end
 
       def log_userinfo_request(provider, success, details = nil)
+        return unless verbose_logging?
+
         log("Userinfo request for #{provider}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
       end
 
       def log_authorization_request(provider, params)
+        return unless verbose_logging?
+
         sanitized_params = filter_sensitive_data(params.to_s)
         log("Authorization request for #{provider}: #{sanitized_params}")
       end
 
       def log_authorization_callback(provider, success)
+        return unless verbose_logging?
+
         log("Authorization callback for #{provider}: #{success ? "success" : "failed"}")
       end
 
       # Log token verification results
       def log_token_verification(provider, success, details = nil)
+        return unless verbose_logging?
+
         log("Token verification for #{provider}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
       end
 
       # Log hosted domain verification results
       def log_hosted_domain_verification(provider, success, details = nil)
+        return unless verbose_logging?
+
         log("Hosted domain verification for #{provider}: #{success ? "success" : "failed"}" \
             "#{details ? " - #{details}" : ""}")
       end
@@ -97,6 +129,8 @@ module Clavis
       # @param success [Boolean] Whether the operation was successful
       # @param details [String, nil] Optional details about the operation
       def log_custom(operation, success, details = nil)
+        return unless verbose_logging?
+
         log("#{operation}: #{success ? "success" : "failed"}#{details ? " - #{details}" : ""}")
       end
 

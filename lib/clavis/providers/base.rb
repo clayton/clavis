@@ -16,10 +16,13 @@ require "clavis/security/redirect_uri_validator"
 require "clavis/security/csrf_protection"
 require "openssl"
 require "jwt"
+require "clavis/providers/token_exchange_handler"
 
 module Clavis
   module Providers
     class Base
+      include Clavis::Providers::TokenExchangeHandler
+
       attr_reader :client_id, :client_secret, :redirect_uri, :authorize_endpoint_url,
                   :token_endpoint_url, :userinfo_endpoint_url, :scope
 
@@ -86,39 +89,37 @@ module Clavis
         Clavis::Security::InputValidator.sanitize_hash(token_data)
       end
 
-      def token_exchange(code:)
-        # Validate inputs - temporarily bypass validation for debugging
-        # raise Clavis::InvalidGrant unless Clavis::Security::InputValidator.valid_code?(code)
+      def token_exchange(options = {})
+        code = options[:code]
+        redirect_uri = options[:redirect_uri] || @redirect_uri
 
-        # raise Clavis::InvalidState if expected_state && !Clavis::Security::InputValidator.valid_state?(expected_state)
+        Clavis::Logging.debug("#{provider_name}#token_exchange - Starting with options: #{options.inspect}")
 
-        params = {
-          grant_type: "authorization_code",
-          code: code,
-          redirect_uri: redirect_uri,
-          client_id: client_id,
-          client_secret: client_secret
-        }
+        # Set up the token exchange parameters
+        params = build_token_exchange_params(code, redirect_uri)
 
-        response = http_client.post(token_endpoint, params)
+        # Make the token exchange request
+        begin
+          response = make_token_request(params)
+          token_response = parse_response(response)
 
-        if response.status != 200
-          Clavis::Logging.log_token_exchange(provider_name, false)
-          handle_token_error_response(response)
+          # Check for error
+          handle_error_response(token_response, response.status)
+
+          # Log the token exchange
+          Clavis::Logging.log_token_exchange(provider_name, true)
+
+          # Return the token data
+          process_id_token_if_present(token_response)
+        rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
+          handle_connection_error(e)
+        rescue Faraday::Error => e
+          handle_faraday_error(e)
+        rescue JSON::ParserError => e
+          handle_parser_error(e)
+        rescue StandardError => e
+          handle_standard_error(e)
         end
-
-        Clavis::Logging.log_token_exchange(provider_name, true)
-
-        # Parse and validate the token response
-        token_data = parse_token_response(response)
-
-        # Temporarily bypass validation for debugging
-        # unless Clavis::Security::InputValidator.valid_token_response?(token_data)
-        #   raise Clavis::InvalidToken, "Invalid token response format"
-        # end
-
-        # Sanitize the token data to prevent XSS
-        Clavis::Security::InputValidator.sanitize_hash(token_data)
       end
 
       def get_user_info(access_token)
@@ -191,59 +192,109 @@ module Clavis
         uri.to_s
       end
 
-      def process_callback(code)
-        # Clean the code to ensure it doesn't have quotes
-        clean_code = code.to_s.gsub(/\A["']|["']\Z/, "")
+      def process_callback(code, user_data = nil)
+        Clavis::Logging.debug("#{provider_name}#process_callback - Starting with code: #{code.inspect}")
 
+        # Normalize the code by removing quote characters and trimming whitespace
+        clean_code = code.gsub(/^"|"$/, "").strip
+        Clavis::Logging.debug("#{provider_name}#process_callback - Cleaned code: #{clean_code}")
+
+        Clavis::Logging.debug("#{provider_name}#process_callback - Calling token_exchange")
         token_data = token_exchange(code: clean_code)
+        Clavis::Logging.debug("#{provider_name}#process_callback - Token data received: #{token_data.inspect}")
 
+        # If we have a token, try to get user info
         user_info = {}
-        if token_data[:access_token] && !token_data[:access_token].empty?
+        if token_data[:access_token]
           begin
+            # Debug log excluding sensitive information
+            token_data.except(:access_token, :refresh_token, :id_token)
+            Clavis::Logging.debug(
+              "#{provider_name}#process_callback - Calling get_user_info with " \
+              "access_token: #{token_data[:access_token].inspect}"
+            )
             user_info = get_user_info(token_data[:access_token])
-          rescue Clavis::UnsupportedOperation
-            # Continue with empty user_info hash
+            Clavis::Logging.debug("#{provider_name}#process_callback - User info received: #{user_info.inspect}")
+          rescue Clavis::UnsupportedOperation => e
+            Clavis::Logging.debug("#{provider_name}#process_callback - UnsupportedOperation: #{e.message}")
+            user_info = {}
+          rescue StandardError => e
+            # Debug log error from user info
+            Clavis::Logging.debug(
+              "#{provider_name}#process_callback - Error getting user info: " \
+              "#{e.class.name}: #{e.message}"
+            )
+            Clavis::Logging.debug("#{provider_name}#process_callback - Error backtrace: #{e.backtrace.join("\n")}")
+            raise
           end
+        else
+          Clavis::Logging.debug("#{provider_name}#process_callback - No access_token available, skipping user_info")
         end
 
-        # For OpenID Connect providers, we should always use the sub claim as the identifier
-        # For non-OIDC providers, fall back to other options
-        uid = if openid_provider? && token_data[:id_token_claims]&.dig(:sub)
+        # Determine a unique identifier (UID) for the user
+        # Prefer ID token claims as the most reliable source
+        uid = if token_data[:id_token_claims] && token_data[:id_token_claims][:sub]
+                Clavis::Logging.debug("#{provider_name}#process_callback - Using sub from id_token_claims as UID")
                 token_data[:id_token_claims][:sub]
-              elsif user_info[:sub] && !user_info[:sub].to_s.empty?
+              elsif user_info[:sub]
+                Clavis::Logging.debug("#{provider_name}#process_callback - Using sub from user_info as UID")
                 user_info[:sub]
-              elsif user_info[:id] && !user_info[:id].to_s.empty?
+              elsif user_info[:id]
+                Clavis::Logging.debug("#{provider_name}#process_callback - Using id from user_info as UID")
                 user_info[:id]
               else
                 # Generate a hash of some token data for consistent ids
+                Clavis::Logging.debug("#{provider_name}#process_callback - Generating fallback UID")
                 data_for_hash = "#{provider_name}:#{token_data[:access_token] || ""}:#{user_info[:email] || ""}"
-                Digest::SHA1.hexdigest(data_for_hash)[0..19]
+                Digest::SHA1.hexdigest(data_for_hash)[0...20] # Use first 20 characters for a longer UID
               end
 
-        # Extract id_token claims if present
+        Clavis::Logging.debug("#{provider_name}#process_callback - UID determined: #{uid}")
+
+        # Merge data from ID token if available
         id_token_claims = {}
-        if token_data[:id_token] && !token_data[:id_token].to_s.empty?
+        if token_data[:id_token]
           begin
+            Clavis::Logging.debug("#{provider_name}#process_callback - Decoding ID token")
             id_token_claims = decode_id_token(token_data[:id_token])
-          rescue StandardError
-            # Continue with empty id_token_claims hash
+            Clavis::Logging.debug("#{provider_name}#process_callback - ID token claims: #{id_token_claims.inspect}")
+          rescue StandardError => e
+            Clavis::Logging.debug("#{provider_name}#process_callback - Error decoding ID token: #{e.message}")
+            # Don't fail if we can't decode the ID token
           end
         end
 
-        # Build the auth hash structure
-        {
+        # Debug log ID token claims
+        Clavis::Logging.debug(
+          "#{provider_name}#process_id_token_if_present - ID token claims: " \
+          "#{id_token_claims.inspect}"
+        )
+
+        # Do any provider-specific user data processing
+        processed_user_data = process_user_data(user_data) if user_data
+
+        # Build the standardized auth hash
+        result = {
           provider: provider_name,
           uid: uid,
-          info: user_info,
+          info: user_info.merge(processed_user_data || {}),
           credentials: {
             token: token_data[:access_token],
             refresh_token: token_data[:refresh_token],
             expires_at: token_data[:expires_at],
-            expires: token_data[:expires_at] && !token_data[:expires_at].nil?
-          },
-          id_token: token_data[:id_token],
-          id_token_claims: id_token_claims
+            expires: !token_data[:expires_at].nil?
+          }
         }
+
+        # Add ID token if available
+        result[:id_token] = token_data[:id_token] if token_data[:id_token]
+        if token_data[:id_token_claims] || !id_token_claims.empty?
+          result[:id_token_claims] =
+            token_data[:id_token_claims] || id_token_claims
+        end
+
+        Clavis::Logging.debug("#{provider_name}#process_callback - Returning auth hash: #{result.inspect}")
+        result
       end
 
       protected
@@ -269,23 +320,35 @@ module Clavis
         Clavis::Security::HttpsEnforcer.create_http_client
       end
 
-      def parse_token_response(response)
-        # If response.body is already a Hash, use it directly
-        if response.body.is_a?(Hash)
-          data = response.body
-        else
-          # Try to parse as JSON
-          begin
-            data = JSON.parse(response.body)
-          rescue JSON::ParserError
-            # Try to parse as form-encoded
-            begin
-              data = Rack::Utils.parse_nested_query(response.body)
-            rescue StandardError
-              return {}
-            end
-          end
-        end
+      def parse_token_response(response_or_body)
+        # Handle both response objects and direct body inputs
+        response_body = if response_or_body.respond_to?(:body)
+                          # It's a response object
+                          response_or_body.body
+                        else
+                          # It's already a body
+                          response_or_body
+                        end
+
+        # Process the body based on its type
+        data = if response_body.is_a?(Hash)
+                 response_body
+               elsif response_body.is_a?(String) && !response_body.empty?
+                 # For tests that might not use Faraday's JSON middleware
+                 begin
+                   JSON.parse(response_body)
+                 rescue JSON::ParserError
+                   # Try to parse as form-encoded for non-JSON responses
+                   begin
+                     Rack::Utils.parse_nested_query(response_body)
+                   rescue StandardError
+                     {}
+                   end
+                 end
+               else
+                 # Empty or nil response
+                 {}
+               end
 
         # Symbolize keys for consistency
         result = data.transform_keys(&:to_sym)
@@ -294,15 +357,11 @@ module Clavis
         result[:token_type] ||= "Bearer" # Default token type
 
         # Handle expires_in
-        if result[:expires_in] && !result[:expires_in].nil?
-          # Calculate expires_at from expires_in if not already set
-          result[:expires_at] ||= Time.now.to_i + result[:expires_in].to_i
+        if result[:expires_in]
+          # Convert to integer if possible
+          expires_in = result[:expires_in].to_i
+          result[:expires_at] = Time.now.to_i + expires_in if expires_in.positive?
         end
-
-        # Validate token response (disable for debugging)
-        # unless Clavis::Security::InputValidator.valid_token_response?(result)
-        #  return {}
-        # end
 
         result
       end
@@ -398,6 +457,35 @@ module Clavis
         return nil unless defined?(Rails) && Rails.application.respond_to?(:credentials)
 
         Rails.application.credentials.dig(:clavis, :providers, provider_name, key)
+      end
+
+      # Process ID token if present in the token response
+      def process_id_token_if_present(token_data)
+        # If there's an ID token in the response, and we're dealing with an OpenID provider,
+        # try to extract claims from it
+        if openid_provider? && token_data[:id_token] && !token_data[:id_token].to_s.empty?
+          begin
+            Clavis::Logging.debug("#{provider_name}#process_id_token_if_present - Processing ID token")
+            id_token_claims = decode_id_token(token_data[:id_token])
+            token_data[:id_token_claims] = id_token_claims
+
+            # Log claims with line breaks to avoid line length issues
+            log_message = "#{provider_name}#process_id_token_if_present - "
+            log_message += "ID token claims: #{id_token_claims.inspect}"
+            Clavis::Logging.debug(log_message)
+          rescue StandardError => e
+            # Log error with line breaks to avoid line length issues
+            log_message = "#{provider_name}#process_id_token_if_present - "
+            log_message += "Error decoding ID token: #{e.message}"
+            Clavis::Logging.debug(log_message)
+
+            # Continue with empty claims if we can't decode the token
+            token_data[:id_token_claims] = {}
+          end
+        end
+
+        # Return the token data, possibly with ID token claims
+        token_data
       end
 
       private

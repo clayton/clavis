@@ -203,12 +203,27 @@ RSpec.describe Clavis::Providers::Google do
   end
 
   describe "#verify_token" do
-    let(:access_token) { "test-access-token" }
+    let(:access_token) { "ya29.a0AeXRPp6SsEYjbJ4QJs_Pf5IepR_lLsMjjEebBzUgXyRl5eZWk4OP036bflB9FlIj19z" }
     let(:http_client) { instance_double(Faraday::Connection) }
     let(:response) { instance_double(Faraday::Response) }
 
+    let(:tokeninfo_response) do
+      {
+        azp: "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+        aud: "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+        sub: "101101101101101101101",
+        scope: "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid",
+        exp: "1742518441",
+        expires_in: "3599",
+        email: "testuser@example.com",
+        email_verified: "true",
+        access_type: "offline"
+      }
+    end
+
     before do
       allow(provider).to receive(:http_client).and_return(http_client)
+      allow(provider).to receive(:client_id).and_return("123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com")
       allow(http_client).to receive(:get).and_yield(double("request", params: {})).and_return(response)
       allow(Clavis::Logging).to receive(:log_token_verification)
     end
@@ -216,7 +231,7 @@ RSpec.describe Clavis::Providers::Google do
     context "when token verification succeeds" do
       before do
         allow(response).to receive(:status).and_return(200)
-        allow(response).to receive(:body).and_return({ aud: "test-client-id" }.to_json)
+        allow(response).to receive(:body).and_return(tokeninfo_response)
       end
 
       it "returns true" do
@@ -227,11 +242,30 @@ RSpec.describe Clavis::Providers::Google do
         provider.verify_token(access_token)
         expect(Clavis::Logging).to have_received(:log_token_verification).with(:google, true)
       end
+
+      it "handles a token hash instead of a string" do
+        token_hash = {
+          access_token: access_token,
+          expires_at: Time.now.to_i + 3600,
+          token_type: "Bearer",
+          refresh_token: "1//067w2wLtk7IsUCgYIARAAGAYSNwF-L9IrcE0HJFO9Y2cP1e_YsnATGVe-tk6MyC9OKEC0IJMIvur2oZEvevw-nvtNGZI4FhfTQZw"
+        }
+        expect(provider.verify_token(token_hash)).to be true
+        expect(http_client).to have_received(:get) do |&block|
+          req = double("request", params: {})
+          block.call(req)
+          expect(req.params[:access_token]).to eq(access_token)
+        end
+      end
     end
 
     context "when token verification fails" do
       before do
         allow(response).to receive(:status).and_return(400)
+        allow(response).to receive(:body).and_return({
+          error: "invalid_token",
+          error_description: "Invalid token"
+        }.to_json)
       end
 
       it "returns false" do
@@ -247,7 +281,16 @@ RSpec.describe Clavis::Providers::Google do
     context "when audience doesn't match" do
       before do
         allow(response).to receive(:status).and_return(200)
-        allow(response).to receive(:body).and_return({ aud: "wrong-client-id" }.to_json)
+        allow(response).to receive(:body).and_return({
+                                                       azp: "wrong-client-id.apps.googleusercontent.com",
+                                                       aud: "wrong-client-id.apps.googleusercontent.com",
+                                                       sub: "101101101101101101101",
+                                                       scope: "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid",
+                                                       exp: "1742518441",
+                                                       expires_in: "3599",
+                                                       email: "testuser@example.com",
+                                                       email_verified: "true"
+                                                     })
       end
 
       it "returns false" do
@@ -262,11 +305,18 @@ RSpec.describe Clavis::Providers::Google do
 
     context "when token verification is disabled" do
       let(:provider_with_disabled_verification) do
-        described_class.new(config.merge(verify_tokens: false))
+        provider = described_class.new(config)
+        # Set the instance variable directly
+        provider.instance_variable_set(:@token_verification_enabled, false)
+        provider
       end
 
       it "returns false without making a request" do
+        # Use allow_any_instance_of since we're passing a specific provider instance
+        allow_any_instance_of(Clavis::Providers::Google).to receive(:http_client).and_return(http_client)
+
         expect(provider_with_disabled_verification.verify_token(access_token)).to be false
+        # With token verification disabled, the method should return early and never call get
         expect(http_client).not_to have_received(:get)
       end
     end
@@ -328,27 +378,30 @@ RSpec.describe Clavis::Providers::Google do
   end
 
   describe "#get_user_info" do
-    let(:access_token) { "test-access-token" }
+    let(:access_token) { "ya29.a0AeXRPp6SsEYjbJ4QJs_Pf5IepR_lLsMjjEebBzUgXyRl5eZWk4OP036bflB9FlIj19z-Z8z5BCKRgSt9gawj90G9YdKHdTLpwR4bLGDeqMcVfcAK9Uzir_aKu3pFQQEt8usrzRUP3iml_ThuTaD_qm0KsZA0ZeoE4-rEd6mUaCgYKAcASARESFQHGX2MiK9omg4zhw5qjmTVlohzoWA0175" }
     let(:http_client) { instance_double(Faraday::Connection) }
     let(:response) { instance_double(Faraday::Response) }
     let(:request) { double("request", headers: {}) }
+
+    let(:userinfo_response) do
+      {
+        sub: "101101101101101101101",
+        name: "Test User",
+        given_name: "Test",
+        family_name: "User",
+        picture: "https://lh3.googleusercontent.com/a/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=s96-c",
+        email: "testuser@example.com",
+        email_verified: true,
+        hd: "example.com"
+      }
+    end
 
     before do
       allow(provider).to receive(:http_client).and_return(http_client)
       allow(http_client).to receive(:get).and_yield(request).and_return(response)
       allow(response).to receive(:status).and_return(200)
-      allow(response).to receive(:body).and_return({
-        sub: "123456789",
-        email: "test@example.com",
-        email_verified: true,
-        name: "Test User",
-        given_name: "Test",
-        family_name: "User",
-        picture: "https://example.com/photo.jpg",
-        hd: "example.com"
-      }.to_json)
-
-      # Mock token verification to succeed
+      allow(response).to receive(:body).and_return(userinfo_response)
+      # Stub verify_token to always return true
       allow(provider).to receive(:verify_token).and_return(true)
       allow(Clavis::Logging).to receive(:log_userinfo_request)
     end
@@ -380,11 +433,31 @@ RSpec.describe Clavis::Providers::Google do
       result = provider.get_user_info(access_token)
 
       expect(result).to include(
-        sub: "123456789",
-        email: "test@example.com",
+        sub: "101101101101101101101",
         name: "Test User",
+        given_name: "Test",
+        family_name: "User",
+        picture: "https://lh3.googleusercontent.com/a/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=s96-c",
+        email: "testuser@example.com",
+        email_verified: true,
         hd: "example.com"
       )
+    end
+
+    it "handles a token hash instead of a string" do
+      token_hash = { access_token: "test-access-token", expires_at: Time.now.to_i + 3600 }
+
+      # Check that the headers are set correctly with the string token
+      expect(provider.get_user_info(token_hash)).to include(
+        sub: "101101101101101101101",
+        name: "Test User",
+        given_name: "Test",
+        family_name: "User",
+        picture: "https://lh3.googleusercontent.com/a/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=s96-c",
+        email: "testuser@example.com"
+      )
+
+      expect(request.headers["Authorization"]).to eq("Bearer test-access-token")
     end
   end
 

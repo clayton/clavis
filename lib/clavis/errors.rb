@@ -214,4 +214,11 @@ module Clavis
       super("Invalid button provider: #{provider}")
     end
   end
+
+  # Response-related errors
+  class InvalidResponse < Error
+    def initialize(message)
+      super("Invalid response: #{message}")
+    end
+  end
 end

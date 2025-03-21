@@ -139,8 +139,15 @@ RSpec.describe Clavis::Providers::Microsoft do
       end
 
       it "handles the error response" do
+        # Temporarily unset CLAVIS_SPEC_NO_ERRORS for this specific test
+        original_value = ENV.fetch("CLAVIS_SPEC_NO_ERRORS", nil)
+        ENV["CLAVIS_SPEC_NO_ERRORS"] = nil
+
         expect { provider.token_exchange(code: "invalid-code") }.to raise_error(Clavis::InvalidGrant)
-        expect(Clavis::Logging).to have_received(:log_token_exchange).with(:microsoft, false)
+        expect(Clavis::Logging).to have_received(:log_token_exchange).with(:microsoft, false, "Token exchange failed: AADSTS70000: The provided value for the input parameter 'code' is invalid.")
+
+        # Restore the environment variable
+        ENV["CLAVIS_SPEC_NO_ERRORS"] = original_value
       end
     end
 

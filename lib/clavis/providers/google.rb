@@ -127,22 +127,50 @@ module Clavis
         end
       end
 
-      # Verify access token directly with Google
       def verify_token(access_token)
         return false unless @token_verification_enabled
-        return false if access_token.nil? || access_token.empty?
+
+        # Extract the token string from the access_token parameter
+        token_str = case access_token
+                    when Hash
+                      token_val = access_token[:access_token] || access_token["access_token"]
+                      token_val
+                    when String
+                      access_token
+                    else
+                      access_token.to_s
+                    end
+
+        return false if token_str.nil? || token_str.empty?
 
         begin
           response = http_client.get(tokeninfo_endpoint) do |req|
-            req.params[:access_token] = access_token
+            req.params[:access_token] = token_str
           end
 
+          # If status is not 200, we can immediately return false without parsing the body
           if response.status != 200
             Clavis::Logging.log_token_verification(provider_name, false, "Token info response: #{response.status}")
             return false
           end
 
-          token_info = JSON.parse(response.body, symbolize_names: true)
+          # Process response body based on what Faraday gives us
+          token_info = {}
+
+          # Faraday's response.body could be a Hash (with JSON middleware) or a String
+          if response.body.is_a?(Hash)
+            # Symbolize keys for consistency
+            token_info = response.body.transform_keys(&:to_sym)
+          elsif response.body.is_a?(String) && !response.body.empty?
+            begin
+              token_info = JSON.parse(response.body, symbolize_names: true)
+            rescue JSON::ParserError
+              Clavis::Logging.log_token_verification(provider_name, false, "Invalid JSON response")
+              return false
+            end
+          else
+            return false
+          end
 
           # Verify the audience matches our client_id
           if token_info[:aud] != client_id
@@ -150,10 +178,11 @@ module Clavis
             return false
           end
 
+          # If we get here, the token is valid
           Clavis::Logging.log_token_verification(provider_name, true)
           true
         rescue StandardError => e
-          Clavis::Logging.log_token_verification(provider_name, false, "Token verification error: #{e.message}")
+          Clavis::Logging.log_token_verification(provider_name, false, e.message)
           false
         end
       end
@@ -177,22 +206,30 @@ module Clavis
 
       # Override to add token verification
       def get_user_info(access_token)
-        # Skip verification for test tokens or when verification is disabled
-        skip_verification = (access_token == "valid-token" || access_token.to_s.start_with?("test-")) &&
-                            !access_token.to_s.include?("verify-fail") &&
-                            !@token_verification_enabled
+        # Extract the token string from the access_token parameter
+        token_str = case access_token
+                    when Hash
+                      token_val = access_token[:access_token] || access_token["access_token"]
+                      token_val
+                    when String
+                      access_token
+                    else
+                      access_token.to_s
+                    end
 
-        unless skip_verification || verify_token(access_token)
-          Clavis::Logging.log_userinfo_request(provider_name, false, "Token verification failed")
-          raise Clavis::InvalidToken, "Access token verification failed"
+        # Validate the access token if token verification is enabled
+        if @token_verification_enabled
+          verified = verify_token(access_token)
+          raise Clavis::InvalidToken, "Access token verification failed" unless verified
         end
 
-        user_info = super
+        # Get the user info from the Google API
+        user_info = super(token_str)
 
-        # Verify hosted domain if configured
-        verify_hosted_domain(user_info)
+        # Verify the hosted domain if configured
+        verify_hosted_domain(user_info) if user_info && !user_info.empty?
 
-        user_info
+        user_info || {}
       end
 
       protected

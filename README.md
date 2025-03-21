@@ -193,6 +193,25 @@ end
 
 See `config/initializers/clavis.rb` for all configuration options.
 
+#### Verbose Logging
+
+By default, Clavis keeps its logs minimal to avoid cluttering your application logs. If you need more detailed logs during authentication processes for debugging purposes, you can enable verbose logging:
+
+```ruby
+Clavis.configure do |config|
+  # Enable detailed authentication flow logs
+  config.verbose_logging = true
+end
+```
+
+When enabled, this will log details about:
+- Token exchanges
+- User info requests
+- Token refreshes and verifications
+- Authorization requests and callbacks
+
+This is particularly useful for debugging OAuth integration issues, but should typically be disabled in production.
+
 ## User Management
 
 Clavis delegates user creation and management to your application through the `find_or_create_from_clavis` method. This is implemented in the ClavisUserMethods concern that's automatically added to your User model during installation.

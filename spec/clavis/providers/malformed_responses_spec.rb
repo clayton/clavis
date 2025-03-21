@@ -313,7 +313,7 @@ RSpec.describe "Handling Malformed API Responses", :isolated_test do
         allow_any_instance_of(Clavis::Providers::Base).to receive(:handle_token_error_response)
       end
 
-      it "handles various error formats" do
+      it "handles various error formats", handles_error_formats: true do
         allow(http_client).to receive(:post).and_return(google_error_response)
         expect do
           google_provider.token_exchange(code: "test-code")
