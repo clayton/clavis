@@ -14,4 +14,5 @@ group :development, :test do
   gem "generator_spec"
   gem "ostruct"
   gem "rspec-rails"
+  gem "webmock", "~> 3.25"
 end
