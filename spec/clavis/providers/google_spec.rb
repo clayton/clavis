@@ -203,7 +203,7 @@ RSpec.describe Clavis::Providers::Google do
   end
 
   describe "#verify_token" do
-    let(:access_token) { "ya29.a0AeXRPp6SsEYjbJ4QJs_Pf5IepR_lLsMjjEebBzUgXyRl5eZWk4OP036bflB9FlIj19z" }
+    let(:access_token) { "ya29.a0AbVbY6XpIzGYmLmn0OpQrSt1UvWxYz2AbCdEfGhIjKlM3NoPqRsTuVwXyZ4AbCdEfGhI5JkLmNoPqRsT6UvWxYz7AbCdEfGhIjKlMnOpQrStUvWxYz8AbCdEfGhIjKlMnOpQrStUvWxYz9AbCdEf" }
     let(:http_client) { instance_double(Faraday::Connection) }
     let(:response) { instance_double(Faraday::Response) }
 
@@ -248,7 +248,7 @@ RSpec.describe Clavis::Providers::Google do
           access_token: access_token,
           expires_at: Time.now.to_i + 3600,
           token_type: "Bearer",
-          refresh_token: "1//067w2wLtk7IsUCgYIARAAGAYSNwF-L9IrcE0HJFO9Y2cP1e_YsnATGVe-tk6MyC9OKEC0IJMIvur2oZEvevw-nvtNGZI4FhfTQZw"
+          refresh_token: "1//04xYZ9AbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdefghijklmnopqrst"
         }
         expect(provider.verify_token(token_hash)).to be true
         expect(http_client).to have_received(:get) do |&block|
@@ -378,7 +378,7 @@ RSpec.describe Clavis::Providers::Google do
   end
 
   describe "#get_user_info" do
-    let(:access_token) { "ya29.a0AeXRPp6SsEYjbJ4QJs_Pf5IepR_lLsMjjEebBzUgXyRl5eZWk4OP036bflB9FlIj19z-Z8z5BCKRgSt9gawj90G9YdKHdTLpwR4bLGDeqMcVfcAK9Uzir_aKu3pFQQEt8usrzRUP3iml_ThuTaD_qm0KsZA0ZeoE4-rEd6mUaCgYKAcASARESFQHGX2MiK9omg4zhw5qjmTVlohzoWA0175" }
+    let(:access_token) { "ya29.a0AbVbY6XpIzGYmLmn0OpQrSt1UvWxYz2AbCdEfGhIjKlM3NoPqRsTuVwXyZ4AbCdEfGhI5JkLmNoPqRsT6UvWxYz7AbCdEfGhIjKlMnOpQrStUvWxYz8AbCdEfGhIjKlMnOpQrStUvWxYz9AbCdEf" }
     let(:http_client) { instance_double(Faraday::Connection) }
     let(:response) { instance_double(Faraday::Response) }
     let(:request) { double("request", headers: {}) }
