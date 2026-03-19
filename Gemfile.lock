@@ -85,7 +85,7 @@ GEM
       public_suffix (>= 2.0.2, < 7.0)
     ast (2.4.2)
     base64 (0.2.0)
-    bcrypt (3.1.20)
+    bcrypt (3.1.22)
     benchmark (0.4.0)
     bigdecimal (3.1.9)
     brakeman (6.2.2)
@@ -308,18 +308,18 @@ PLATFORMS
 DEPENDENCIES
   bcrypt
   brakeman (~> 6.1)
-  capybara (~> 3.39)
+  capybara (~> 3.39, >= 0)
   clavis!
-  generator_spec (~> 0.9.4)
+  generator_spec (~> 0.9.4, >= 0)
   omniauth (~> 2.0)
   ostruct (~> 0.6.0)
   rack-attack (~> 6.7)
   rake (~> 13.0)
   rspec (~> 3.0)
-  rspec-rails (~> 6.0)
+  rspec-rails (~> 6.0, >= 0)
   rubocop (~> 1.21)
   simplecov (~> 0.22.0)
-  sqlite3 (~> 2.1.0)
+  sqlite3 (~> 2.1.0, >= 0)
   webmock (~> 3.25)
 
 BUNDLED WITH
